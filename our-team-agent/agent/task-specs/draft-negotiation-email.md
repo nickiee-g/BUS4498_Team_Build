@@ -39,6 +39,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Must maintain a polite, professional tone.
 - **Retry limits:** 0
 
+### Permitted Subtask 2
+- **Subtask name:** draft_custom_counteroffer
+- **Subtask description:** Uses the synthesized negotiation points to write the actual email body requesting a lower rent or specific lease concession.
+- **Subtask boundary:** Must maintain a polite tone and must not legally commit the user to signing a lease.
+- **Retry limits:** 0
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
