@@ -45,6 +45,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Read-only analysis; prohibited from actually contacting the provided email/phone number.
 - **Retry limits:** 0
 
+### Permitted Subtask 3
+- **Subtask name:** evaluate_price_realism
+- **Subtask description:** Compares the listed rent against the typical market rate for the specified bed/bath count and neighborhood to detect "too good to be true" bait-and-switch pricing.
+- **Subtask boundary:** Cannot access live market data outside the provided JSON payload context.
+- **Retry limits:** 0
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
