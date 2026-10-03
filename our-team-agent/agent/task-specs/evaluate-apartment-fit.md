@@ -39,6 +39,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Read-only analysis of the provided text.
 - **Retry limits:** 0
 
+### Permitted Subtask 2
+- **Subtask name:** compute_effective_cost
+- **Subtask description:** Calculates the true monthly cost by factoring in the estimated commute time and any hidden fees identified in the text.
+- **Subtask boundary:** Cannot modify the original listing price, only appends a new calculated field.
+- **Retry limits:** 1
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
