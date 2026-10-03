@@ -2,7 +2,7 @@
 
 ## Basic Information
 
-- **Task ID:** T1 app-user-interface
+- **Task ID:** T1
 - **Task name:** App User Interface
 - **Task type:** Retrieve
 - **Task owner:** Nicolas Gonzalez
