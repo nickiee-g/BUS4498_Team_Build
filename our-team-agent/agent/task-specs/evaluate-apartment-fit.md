@@ -45,6 +45,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Cannot modify the original listing price, only appends a new calculated field.
 - **Retry limits:** 1
 
+### Permitted Subtask 3
+- **Subtask name:** detect_lease_restrictions
+- **Subtask description:** Scans the unstructured text specifically for rigid terms like sublease bans, strict pet weight limits, or abnormal move-in fees.
+- **Subtask boundary:** Read-only analysis of the listing description.
+- **Retry limits:** 0
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
