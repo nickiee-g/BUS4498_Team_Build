@@ -1,7 +1,7 @@
 # Workflow of Tasks
 
 ## 1. Workflow Goal
-This workflow supports the goal in my completed [team charter]([PASTE_CHARTER_FILE_URL_HERE](https://github.com/nickiee-g/BUS4498_Team_Build/blob/main/README.md)[cite: 3].
+This workflow supports the goal in my completed [team charter](https://github.com/nickiee-g/BUS4498_Team_Build/blob/main/README.md).[cite: 3].
 
 ## 2. Workflow Trigger
 User submits weighted apartment search criteria (e.g., target commute, max budget, deal-breakers) via the App User Interface.
