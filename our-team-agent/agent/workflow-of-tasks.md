@@ -1,37 +1,49 @@
 # Workflow of Tasks
 
-*BUS 4498 Team Build Milestone 1. Save this file at `our_team_agent/agent/workflow-of-tasks.md` in `BUS4498_Team_Build`. Complete the prompts for your team's own problem. Remove these instructions and unused prompts before submitting.*
-
 ## 1. Workflow Goal
-
-This workflow supports the goal in our completed [team charter](PASTE_CHARTER_FILE_URL_HERE).
-
-*Open your completed charter file on GitHub, copy its address from the browser, and replace `PASTE_CHARTER_FILE_URL_HERE` with that address. Keep the charter in its existing location; do not create a second charter.*
+This workflow supports the goal in my completed [team charter](PASTE_CHARTER_FILE_URL_HERE)[cite: 3].
 
 ## 2. Workflow Trigger
-
-[State the event, request, schedule, or condition that starts one run.]
+User submits weighted apartment search criteria (e.g., target commute, max budget, deal-breakers) via the App User Interface.
 
 ## 3. Completion Condition at Runtime
-
-[State the observable condition that ends one run successfully. Identify what result or evidence must exist. This is different from the long-term target in your system goal.]
+The workflow ends successfully when a qualified apartment match is manually reviewed by the user and the drafted negotiation email is successfully delivered to their device via a webhook.
 
 ## 4. General Workflow
+The workflow begins when the user submits their search criteria. An automated script retrieves new listings from external sources, passing them to a rule-based filter that immediately discards any properties violating hard constraints like maximum budget. The remaining candidates are handed to an L3 agent to extract hidden amenities, compute effective costs, and flag potential scams. Once verified as safe, a deterministic ranking script scores and sorts the candidates into a database. 
 
-[Describe the normal sequence of tasks in one or two paragraphs. Then explain what happens when necessary information is missing, a tool fails, or a case requires human review. Identify what the person receives and whether the workflow stops or resumes after review.]
+User manually reviews these top-ranked matches. If he or she approves a listing, an L3 agent drafts a personalized negotiation email, which is then sent to him or her via a webhook for final approval. If fetching data fails, an API drops a connection, or a scam is detected, the workflow logs the exception, halts further automated action on that specific listing, and hands it off to the user for manual review.
 
 ## 5. Workflow Diagram
-
-*Replace the example diagram with your team's workflow. Give each work task a unique ID, such as T1, and a verb-object name, such as Retrieve Requests. Label branch conditions. Show human-review paths and stopping points. Use the same task IDs and names in the worksheet, task summary, and task specifications. Start/end markers and gateways that only route the flow are not work tasks.*
-
 ```mermaid
 flowchart TD
-    START([Workflow trigger]) --> T1["T1: First task"]
-    T1 --> D1{"Required evidence available?"}
-    D1 -->|Yes| T2["T2: Next task"]
-    D1 -->|No| T3["T3: Review exception"]
-    T2 --> END([Successful completion])
-    T3 --> HANDOFF([Stopped for human review])
-```
-
-*The example labels are placeholders, not required project tasks. After editing, use GitHub Preview to check that the Mermaid diagram renders. Create a specification for every work task, including human-review tasks, and list each one in `task-summary.md`. Record automation levels and reasons only in the team worksheet.*
+    %% L0 Trigger
+    UI((L0: app-user-interface)) --> |Submits Criteria| Fetch[L1: fetch-listing-data]
+    
+    %% L1/L2 Pipeline
+    Fetch --> Filter{L2: filter-candidate-listings}
+    Filter -- Over Budget --> Discard1[Log & Discard]
+    
+    %% L3 Agent Processing
+    Filter -- Passes Constraints --> Eval[L3: evaluate-apartment-fit]
+    Eval --> Scam[L3: flag-scam-listings]
+    Scam -- High Fraud Risk --> Discard2[Log & Discard]
+    
+    %% L2 Scoring
+    Scam -- Verified Safe --> Score[L2: calculate-weighted-rank]
+    Score --> |Sorts Database| DB[(SQLite Database)]
+    
+    %% Loops & Exceptions
+    Fetch -- Error --> Exception[Handoff Exception to Nicolas Gonzalez]
+    Filter -- Error --> Exception
+    Eval -- API Error --> Exception
+    Scam -- API Error --> Exception
+    
+    %% L0 Human Review & Action
+    DB --> HumanReview{L0: review-qualified-matches}
+    HumanReview -- Reject --> End1((End: No Action))
+    
+    %% Post-Processing
+    HumanReview -- Approve --> Draft[L3: draft-negotiation-email]
+    Draft --> Notify[L1: trigger-webhook-notification]
+    Notify --> End2((End: Alert Sent to User))
