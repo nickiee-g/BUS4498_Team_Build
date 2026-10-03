@@ -2,7 +2,7 @@
 
 ## Basic Information
 
-- **Task ID:** T2 calculate-weighted-rank
+- **Task ID:** T6
 - **Task name:** Calculate Weighted Rank
 - **Task type:** Reason
 - **Task owner:** Nicolas Gonzalez
