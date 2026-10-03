@@ -39,6 +39,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Only analyzes the text provided in the input payload.
 - **Retry limits:** 0
 
+### Permitted Subtask 2
+- **Subtask name:** verify_contact_methods
+- **Subtask description:** Evaluates the requested contact method or payment demand to see if it matches high-risk scam profiles (e.g., demanding wire transfers before a viewing).
+- **Subtask boundary:** Read-only analysis; prohibited from actually contacting the provided email/phone number.
+- **Retry limits:** 0
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
