@@ -45,6 +45,12 @@ task_owner: "Nicolas Gonzalez"
 - **Subtask boundary:** Must maintain a polite tone and must not legally commit the user to signing a lease.
 - **Retry limits:** 0
 
+### Permitted Subtask 3
+- **Subtask name:** determine_recipient_persona
+- **Subtask description:** Analyzes the contact name and listing language to determine if the landlord is an individual owner or a corporate management company, adjusting the required formality of the email.
+- **Subtask boundary:** Cannot search the web for the landlord's corporate history.
+- **Retry limits:** 0
+
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
