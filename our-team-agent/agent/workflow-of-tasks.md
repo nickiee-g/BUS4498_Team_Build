@@ -18,19 +18,19 @@ User manually reviews these top-ranked matches. If he or she approves a listing,
 ```mermaid
 flowchart TD
     %% L0 Trigger
-    UI((L0: app-user-interface)) --> |Submits Criteria| Fetch[L1: fetch-listing-data]
+    UI((L0: T1 App User Interface)) --> |Submits Criteria| Fetch[L1: T2 Fetch Listing Data]
     
     %% L1/L2 Pipeline
-    Fetch --> Filter{L2: filter-candidate-listings}
+    Fetch --> Filter{L2: T3 Filter Candidate Listings}
     Filter -- Over Budget --> Discard1[Log & Discard]
     
     %% L3 Agent Processing
-    Filter -- Passes Constraints --> Eval[L3: evaluate-apartment-fit]
-    Eval --> Scam[L3: flag-scam-listings]
+    Filter -- Passes Constraints --> Eval[L3: T4 Evaluate Apartment Fit]
+    Eval --> Scam[L3: T5 Flag Scam Listings]
     Scam -- High Fraud Risk --> Discard2[Log & Discard]
     
     %% L2 Scoring
-    Scam -- Verified Safe --> Score[L2: calculate-weighted-rank]
+    Scam -- Verified Safe --> Score[L2: T6 Calculate Weighted Rank]
     Score --> |Sorts Database| DB[(SQLite Database)]
     
     %% Loops & Exceptions
@@ -40,10 +40,10 @@ flowchart TD
     Scam -- API Error --> Exception
     
     %% L0 Human Review & Action
-    DB --> HumanReview{L0: review-qualified-matches}
+    DB --> HumanReview{L0: T7 Review Qualified Matches}
     HumanReview -- Reject --> End1((End: No Action))
     
     %% Post-Processing
-    HumanReview -- Approve --> Draft[L3: draft-negotiation-email]
-    Draft --> Notify[L1: trigger-webhook-notification]
+    HumanReview -- Approve --> Draft[L3: T8 Draft Negotiation Email]
+    Draft --> Notify[L1: T9 Trigger Webhook Notification]
     Notify --> End2((End: Alert Sent to User))
