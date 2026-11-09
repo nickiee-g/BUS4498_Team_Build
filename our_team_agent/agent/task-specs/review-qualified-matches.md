@@ -1,46 +1,58 @@
-# Review Qualified Matches Task Specification
+# Review Ranked Matches Task Specification
 
 ## Basic Information
 
 - **Task ID:** T7
-- **Task name:** Review Qualified Matches
-- **Task type:** Decide
+- **Task name:** Review Ranked Matches
+- **Task level:** L0
+- **Task type:** Decide (Human)
 - **Task owner:** Nicolas Gonzalez
 
 ## 1. Task Description
 
-This manual task requires Nicolas to review the top-ranked apartment matches via the UI. Because pursuing a lease has financial consequences, a human must authorize which specific apartment is worth contacting the landlord about.
+This interactive human-in-the-loop task presents the student with the ranked, verified-safe rental listings in a clean browser dashboard. Each card displays the true effective monthly cost, base rent, utility breakdown, commute time to Cal Poly, and a direct link to the listing. The student reviews their options and selects one listing to approve and generate an inquiry email for.
 
 ## 2. Inputs
 
 ### Input 1
 
-- **Input name:** top_ranked_matches
-- **Contents and format:** UI dashboard displaying the highest-scoring listings from the database.
-- **Source:** calculate-weighted-rank
+- **Input name:** ranked_listings_dataset
+- **Contents and format:** UI dashboard displaying the scored and sorted listings retrieved from the database cache.
+- **Source:** calculate-weighted-rank (T6)
 
-- **If a required input is missing or invalid:** The UI will display a "No Matches Found" error.
+- **If a required input is missing or invalid:** The UI displays a "No Matching Properties Found" notice and allows the student to adjust search criteria.
 
 ## 3. Outputs
 
 ### Output 1
 
 - **Output name:** approved_listing_target
-- **Contents and format:** A JSON object containing the specific apartment data Nicolas wants to pursue.
-- **Next task or recipient:** draft-negotiation-email
-- **Complete when:** The user clicks "Approve & Draft Email" on a specific listing.
+- **Contents and format:** A JSON object for the single listing selected by the student:
+  ```json
+  {
+    "listing_id": "SLO-2026-0042",
+    "listing_url": "https://example.com/listings/slo-0042",
+    "address": "1250 Foothill Blvd, San Luis Obispo, CA",
+    "effective_monthly_cost": 1495,
+    "contact_email": "manager@foothillrentals.com",
+    "extracted_amenities": ["off-street parking", "water included"],
+    "commute_minutes": 8,
+    "user_notes": "Interested in lease starting September 1st"
+  }
+  ```
+- **Next task or recipient:** draft-negotiation-email (T8)
+- **Complete when:** The student clicks "Select & Draft Inquiry" on a property card.
 
 ## 4. Planned Tools
 
 ### Tool 1
 
-- **Tool name:** human_approval_dashboard
-- **Input:** top_ranked_matches
+- **Tool name:** review_ranked_matches
+- **Input:** ranked_listings_dataset
 - **Output:** approved_listing_target
-- **Implementation Route:** web API calls
+- **Implementation Route:** web UI / client components
 - **Integration approach:** direct integration
-- **Role in this task:** Displays the data and captures the human's final decision.
-- **Task timeout:** 3 business days
-- **Maximum retries:** Not applicable — manual task.
-- **Retry only when:** Not applicable
-- **On timeout, exhausted retries, or an error that cannot be retried:** The workflow ends with no action taken.
+- **Role in this task:** Renders the responsive listing cards, shows cost and commute breakdowns, provides the direct listing link, and captures user selection.
+- **Task timeout:** Not applicable — interactive student session.
+- **Maximum retries:** Not applicable
+- **On timeout, exhausted retries, or an error that cannot be retried:** If the student closes the session without selecting, workflow cleanly terminates with status `End: No Action`.

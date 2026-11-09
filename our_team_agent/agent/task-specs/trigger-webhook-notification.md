@@ -1,46 +1,55 @@
-# Trigger Webhook Notification Task Specification
+# Display and Dispatch Inquiry Task Specification
 
 ## Basic Information
 
 - **Task ID:** T9
-- **Task name:** Trigger Webhook Notification
-- **Task type:** Act
+- **Task name:** Display and Dispatch Inquiry
+- **Task level:** L1
+- **Task type:** Act (UI / Dispatch)
 - **Task owner:** Nicolas Gonzalez
 
 ## 1. Task Description
 
-This is a deterministic task that packages the finalized email draft and the apartment details into a JSON payload and pushes an HTTP POST request to a Webhook API to alert the user.
+This task takes the drafted landlord inquiry payload from T8 and displays it on the student's dashboard screen for final review and editing. It provides one-click options to copy the email body or send it via an integrated notification/webhook, ensuring the student maintains complete oversight before any outreach is dispatched.
 
 ## 2. Inputs
 
 ### Input 1
 
 - **Input name:** drafted_email_payload
-- **Contents and format:** JSON payload containing the text of the drafted email.
-- **Source:** draft-negotiation-email
+- **Contents and format:** JSON payload containing `listing_id`, `recipient_email`, `subject`, and `body`.
+- **Source:** draft-negotiation-email (T8)
 
-- **If a required input is missing or invalid:** Log an empty payload error and halt the workflow.
+- **If a required input is missing or invalid:** Halt the task, display an "Empty Email Payload" error, and prompt the student to re-generate the draft.
 
 ## 3. Outputs
 
 ### Output 1
 
-- **Output name:** webhook_delivery_receipt
-- **Contents and format:** A 200 OK HTTP response code indicating successful delivery.
-- **Next task or recipient:** End of Workflow
-- **Complete when:** The webhook service confirms receipt of the POST request.
+- **Output name:** inquiry_delivery_status
+- **Contents and format:** A JSON object confirming student action:
+  ```json
+  {
+    "listing_id": "SLO-2026-0042",
+    "status": "Displayed_And_Approved",
+    "delivery_channel": "Dashboard_Copy",
+    "timestamp": "2026-11-08T20:50:00Z"
+  }
+  ```
+- **Next task or recipient:** End of Workflow (Workflow complete)
+- **Complete when:** The student reviews the draft and either copies the text or dispatches the notification.
 
 ## 4. Planned Tools
 
 ### Tool 1
 
-- **Tool name:** post_to_webhook
+- **Tool name:** display_inquiry_card
 - **Input:** drafted_email_payload
-- **Output:** webhook_delivery_receipt
-- **Implementation Route:** web API calls
+- **Output:** inquiry_delivery_status
+- **Implementation Route:** UI component / functions
 - **Integration approach:** direct integration
-- **Role in this task:** Executes the network request to push the notification to the user's device.
-- **Task timeout:** 15 seconds
-- **Maximum retries:** 3
-- **Retry only when:** The destination server returns a 5xx error or times out. Wait 5 seconds between retries.
-- **On timeout, exhausted retries, or an error that cannot be retried:** Log a delivery failure.
+- **Role in this task:** Renders the editable email draft in the UI with a "Copy to Clipboard" button and an optional webhook dispatch trigger.
+- **Task timeout:** 10 seconds
+- **Maximum retries:** 2
+- **Retry only when:** Network or webhook delivery timeout.
+- **On timeout, exhausted retries, or an error that cannot be retried:** Display an in-app error notice with a manual "Retry Dispatch" button so delivery failures are never treated as silent successes.
