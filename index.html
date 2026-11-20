@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poly Rental Matcher — Cal Poly SLO Off-Campus Housing Evaluator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Exact Supabase JS library version per hosting-rules.md Rule 13 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="brand-badge">SLO</span>
+        <div>
+          <h1>Poly Rental Matcher</h1>
+          <p class="subtitle">Cal Poly Off-Campus Housing Matcher &amp; Deal Evaluator</p>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button id="tab-student" class="tab-btn active" type="button">Student Search</button>
+        <button id="tab-admin" class="tab-btn" type="button">Reviewer &amp; Admin</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Status Banner -->
+    <div id="global-banner" class="banner hidden" role="status"></div>
+
+    <!-- ==================== STUDENT VIEW ==================== -->
+    <section id="view-student" class="view-section">
+      <div class="card">
+        <h2>1. Your Housing Criteria (T1)</h2>
+        <p class="muted">
+          Set your true <strong>maximum effective monthly budget</strong> (base rent + utilities + parking + commute) and strict dealbreakers.
+          Any property over budget, violating a dealbreaker, or flagged as a scam is automatically filtered out in code.
+        </p>
+
+        <form id="criteria-form" class="form-grid">
+          <label class="field">
+            <span>Max Effective Monthly Budget ($)</span>
+            <input id="max-budget" type="number" min="600" max="8000" step="50" value="2400" required />
+          </label>
+
+          <label class="field">
+            <span>Minimum Bedrooms</span>
+            <select id="min-bedrooms">
+              <option value="0" selected>Studio / Any (0+)</option>
+              <option value="1">1+ Bedroom</option>
+              <option value="2">2+ Bedrooms</option>
+              <option value="3">3+ Bedrooms</option>
+              <option value="4">4+ Bedrooms</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Listings Batch Size to Evaluate</span>
+            <select id="sample-limit">
+              <option value="6" selected>Quick Demo (6 mixed listings)</option>
+              <option value="12">Medium Run (12 listings)</option>
+              <option value="28">Full SLO Dataset (28 listings)</option>
+            </select>
+          </label>
+
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input id="sublease-required" type="checkbox" checked />
+              <span>Subleasing required (discard strict no-sublease leases)</span>
+            </label>
+            <label class="checkbox-label">
+              <input id="pets-required" type="checkbox" />
+              <span>Pet-friendly required</span>
+            </label>
+            <label class="checkbox-label">
+              <input id="has-vehicle" type="checkbox" checked />
+              <span>I have a car (adds parking cost if none included)</span>
+            </label>
+            <label class="checkbox-label">
+              <input id="dry-run-toggle" type="checkbox" />
+              <span>Dry-run preview mode (evaluate without saving to database)</span>
+            </label>
+          </div>
+
+          <div class="upload-row">
+            <label class="field">
+              <span>Optional: Upload your own SLO Listings CSV</span>
+              <input id="csv-file-input" type="file" accept=".csv,.json" />
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button id="run-search-btn" type="submit" class="btn btn-primary">
+              Evaluate SLO Listings
+            </button>
+            <button id="load-saved-btn" type="button" class="btn btn-secondary">
+              Load Saved Qualified Matches
+            </button>
+          </div>
+        </form>
+
+        <div id="run-stats" class="run-stats hidden"></div>
+      </div>
+
+      <!-- Ranked Safe Matches (T7) -->
+      <div class="section-header">
+        <h2>2. Verified Safe Matches (Ranked)</h2>
+        <span id="match-count" class="pill">0 matches</span>
+      </div>
+      <div id="matches-list" class="cards-grid"></div>
+
+      <!-- Drafted Landlord Inquiry Panel (T8 & T9) -->
+      <div id="inquiry-panel" class="card hidden">
+        <h2>3. Draft Landlord Inquiry (T8 / T9)</h2>
+        <p class="muted">
+          Review and edit your personalized inquiry below. This agent <strong>never</strong> sends emails automatically — you approve and copy it when ready.
+        </p>
+        <div id="inquiry-meta" class="meta-line"></div>
+        <label class="field">
+          <span>Subject</span>
+          <input id="draft-subject" type="text" />
+        </label>
+        <label class="field">
+          <span>Email Body</span>
+          <textarea id="draft-body" rows="8"></textarea>
+        </label>
+        <div class="form-actions">
+          <button id="approve-copy-btn" type="button" class="btn btn-primary">
+            Approve &amp; Copy Email
+          </button>
+          <button id="close-inquiry-btn" type="button" class="btn btn-secondary">
+            Close
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ADMIN / REVIEWER VIEW ==================== -->
+    <section id="view-admin" class="view-section hidden">
+      <!-- Sign-In Card -->
+      <div id="admin-login-card" class="card narrow-card">
+        <h2>Reviewer Sign-In</h2>
+        <p class="muted">
+          Only signed-in reviewers (Nicolas Gonzalez) can view flagged fraud audits, decide held listings, toggle lessons, or change system limits.
+        </p>
+        <form id="login-form" class="stack">
+          <label class="field">
+            <span>Reviewer Email</span>
+            <input id="login-email" type="email" required placeholder="you@calpoly.edu" />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input id="login-password" type="password" required />
+          </label>
+          <button type="submit" class="btn btn-primary">Sign In</button>
+        </form>
+      </div>
+
+      <!-- Signed-In Admin Dashboard -->
+      <div id="admin-dashboard" class="hidden">
+        <div class="card admin-topbar">
+          <div>
+            <h2>Reviewer Control Center</h2>
+            <p id="admin-user-label" class="muted"></p>
+          </div>
+          <div class="form-actions">
+            <button id="refresh-admin-btn" type="button" class="btn btn-secondary">Refresh All</button>
+            <button id="logout-btn" type="button" class="btn btn-danger">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- Permissions & Off Switch -->
+        <div class="card">
+          <h3>Permissions, Limits &amp; Off Switch</h3>
+          <p class="muted">
+            Every change requires a reason and takes effect on the very next agent run. Turning <strong>Agent Paused</strong> to <code>true</code> immediately halts all AI calls.
+          </p>
+          <div id="settings-list" class="stack"></div>
+        </div>
+
+        <!-- Held Listings Review Queue -->
+        <div class="card">
+          <h3>Ambiguous &amp; Held Listings Review Queue</h3>
+          <p class="muted">
+            Click <strong>Resume (Mark Safe)</strong> or <strong>End (Confirm Scam)</strong> with a reason. Every decision automatically records a trusted Lesson Learned.
+          </p>
+          <div id="held-list" class="stack"></div>
+        </div>
+
+        <!-- Lessons Learned -->
+        <div class="card">
+          <h3>Lessons Learned</h3>
+          <p class="muted">
+            Active lessons add caution on future runs. Switch any lesson off to make the agent forget it immediately.
+          </p>
+          <div id="lessons-list" class="stack"></div>
+        </div>
+
+        <!-- Student Reports -->
+        <div class="card">
+          <h3>Student-Reported Listing Mistakes</h3>
+          <div id="reports-list" class="stack"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      BUS 4498 Term Project · Poly Rental Matcher (`our_team_agent`) · Owner: Nicolas Gonzalez · All data shown is demo/test data.
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
