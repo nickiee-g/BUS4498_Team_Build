@@ -793,10 +793,13 @@ function sliceCsv(csvText, limit) {
   return [header, ...dataLines.slice(0, limit)].join("\n");
 }
 
+const SAFE_STUDENT_COLUMNS =
+  "id,listing_id,listing_url,title,neighborhood,address,bedrooms,bathrooms,base_rent,monthly_utilities,parking_expense,commute_expense,effective_monthly_cost,commute_minutes,commute_miles,sublease_allowed,pets_allowed,amenities,price_realism_label,rank_score,status,contact_name,contact_method,created_at";
+
 async function loadSavedQualifiedMatches() {
   const { data, error } = await sb
     .from("evaluated_listings")
-    .select("*")
+    .select(SAFE_STUDENT_COLUMNS)
     .eq("status", "qualified")
     .order("rank_score", { ascending: false });
 
