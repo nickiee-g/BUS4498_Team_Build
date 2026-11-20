@@ -176,7 +176,7 @@ INSERT INTO public.agent_settings (key, label, kind, value, reason, updated_by)
 VALUES
   ('paused', 'Agent Paused (Off Switch)', 'switch', 'false', 'Initial setup: agent active', 'Nicolas Gonzalez'),
   ('require_manual_signoff', 'Require Manual Sign-Off for Ambiguous Listings & Drafts', 'switch', 'true', 'Initial setup per permissions-plan.md', 'Nicolas Gonzalez'),
-  ('batch_limit', 'Max Listings Evaluated Per Search Run', 'number', '30', 'Initial setup per permissions-plan.md', 'Nicolas Gonzalez'),
+  ('batch_limit', 'Max Listings Evaluated Per Search Run', 'number', '50', 'Expanded curated SLO dataset to 50 unique listings', 'Nicolas Gonzalez'),
   ('max_commute_minutes', 'Max One-Way Commute Minutes to Cal Poly', 'number', '30', 'Initial setup per permissions-plan.md', 'Nicolas Gonzalez'),
   ('monthly_api_budget_usd', 'Monthly API Spending Cap (USD)', 'number', '15', 'Initial setup per permissions-plan.md', 'Nicolas Gonzalez')
 ON CONFLICT (key) DO NOTHING;

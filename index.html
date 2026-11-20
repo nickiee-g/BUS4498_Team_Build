@@ -2,216 +2,588 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Poly Rental Matcher — Cal Poly SLO Off-Campus Housing Evaluator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Poly Rental Matcher — Cal Poly San Luis Obispo Off-Campus Housing</title>
+  <meta name="theme-color" content="#154734" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="mega-menu.css" />
   <link rel="stylesheet" href="styles.css" />
   <!-- Exact Supabase JS library version per hosting-rules.md Rule 13 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <div class="brand">
-        <span class="brand-badge">SLO</span>
-        <div>
-          <h1>Poly Rental Matcher</h1>
-          <p class="subtitle">Cal Poly Off-Campus Housing Matcher &amp; Deal Evaluator</p>
-        </div>
-      </div>
-      <nav class="tabs" role="tablist">
-        <button id="tab-student" class="tab-btn active" type="button">Student Search</button>
-        <button id="tab-admin" class="tab-btn" type="button">Reviewer &amp; Admin</button>
-      </nav>
+  <!-- ==================== FLOATING GLASS NAV PILLS (Rosa Alba Style) ==================== -->
+  <header class="glass-nav" id="glass-nav">
+    <a class="g-pill g-brand" href="#top" id="brand-home">
+      <span class="g-surf"></span>
+      <i class="sun-dot"></i>
+      <span>Poly Matcher</span>
+    </a>
+
+    <nav class="g-pill g-links" aria-label="Sections">
+      <span class="g-surf"></span>
+      <a href="#search"><span class="n">01</span>Search</a>
+      <a href="#rules"><span class="n">02</span>Guide</a>
+      <a href="#faq"><span class="n">03</span>FAQ</a>
+      <button id="load-saved-nav" class="g-link-btn" type="button">
+        Saved <span id="saved-count-pill" class="g-count">0</span>
+      </button>
+    </nav>
+
+    <div class="g-nav-right">
+      <span id="nav-status-chip" class="status-chip hidden"></span>
+      <button id="tab-admin" class="g-pill g-admin-btn" type="button">
+        <span class="g-surf"></span>
+        <span class="g-lbl">ID: Reviewer</span>
+      </button>
+      <button id="nav-eval-btn" class="cta-pill" type="button">
+        <span>Evaluate SLO</span>
+        <span class="cta-ar">→</span>
+      </button>
     </div>
   </header>
 
-  <main class="container">
-    <!-- Status Banner -->
-    <div id="global-banner" class="banner hidden" role="status"></div>
+  <!-- Global Status Banner (Fixed below nav when active) -->
+  <div id="global-banner" class="banner hidden" role="status"></div>
 
-    <!-- ==================== STUDENT VIEW ==================== -->
-    <section id="view-student" class="view-section">
-      <div class="card">
-        <h2>1. Your Housing Criteria (T1)</h2>
-        <p class="muted">
-          Set your true <strong>maximum effective monthly budget</strong> (base rent + utilities + parking + commute) and strict dealbreakers.
-          Any property over budget, violating a dealbreaker, or flagged as a scam is automatically filtered out in code.
-        </p>
+  <!-- ==================== MAIN STUDENT EXPERIENCE ==================== -->
+  <div id="student-experience">
+    <!-- ═════════ HERO — Bishop Peak SLO Editorial Stage ═════════ -->
+    <section class="hero" id="top" data-theme="dark">
+      <div class="hero-stage" id="hero-stage">
+        <img class="hero-bg" id="hero-bg" src="assets/slo-hero-bishop-peak.jpg" alt="Golden hour view of Bishop Peak and San Luis Obispo foothills" />
+        <div class="hero-sun-glow" id="hero-sun-glow" aria-hidden="true"></div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="hero-fade" aria-hidden="true"></div>
 
-        <form id="criteria-form" class="form-grid">
-          <label class="field">
-            <span>Max Effective Monthly Budget ($)</span>
-            <input id="max-budget" type="number" min="600" max="8000" step="50" value="2400" required />
-          </label>
+        <!-- Giant Fitted Oswald Wordmark -->
+        <h1 class="hero-mark" id="hero-mark" aria-label="Poly Matcher">
+          <span class="ln">POLY</span><span class="gap"></span><span class="ln">MATCHER</span>
+        </h1>
 
-          <label class="field">
-            <span>Minimum Bedrooms</span>
-            <select id="min-bedrooms">
-              <option value="0" selected>Studio / Any (0+)</option>
-              <option value="1">1+ Bedroom</option>
-              <option value="2">2+ Bedrooms</option>
-              <option value="3">3+ Bedrooms</option>
-              <option value="4">4+ Bedrooms</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Listings Batch Size to Evaluate</span>
-            <select id="sample-limit">
-              <option value="6" selected>Quick Demo (6 mixed listings)</option>
-              <option value="12">Medium Run (12 listings)</option>
-              <option value="28">Full SLO Dataset (28 listings)</option>
-            </select>
-          </label>
-
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input id="sublease-required" type="checkbox" checked />
-              <span>Subleasing required (discard strict no-sublease leases)</span>
-            </label>
-            <label class="checkbox-label">
-              <input id="pets-required" type="checkbox" />
-              <span>Pet-friendly required</span>
-            </label>
-            <label class="checkbox-label">
-              <input id="has-vehicle" type="checkbox" checked />
-              <span>I have a car (adds parking cost if none included)</span>
-            </label>
-            <label class="checkbox-label">
-              <input id="dry-run-toggle" type="checkbox" />
-              <span>Dry-run preview mode (evaluate without saving to database)</span>
-            </label>
+        <!-- Live SLO HUD Chrome -->
+        <div class="hero-hud" aria-hidden="true">
+          <span class="br b1"></span>
+          <span class="br b2"></span>
+          <div class="hud-row">
+            <span class="mono hud-chip">N 35°18′ · W 120°39′ — <b>San Luis Obispo</b></span>
+            <span class="mono hud-chip hud-live">
+              <span>Walk Zone <b>1.0 mi</b></span>
+              <span>SLO Breeze <b id="hud-wind">11 kn</b></span>
+              <span><b id="hud-clock">--:--</b> PT</span>
+            </span>
           </div>
+          <span class="mono hud-chip hud-hint">[ Click the sky — feel the SLO breeze ]</span>
+        </div>
 
-          <div class="upload-row">
-            <label class="field">
-              <span>Optional: Upload your own SLO Listings CSV</span>
-              <input id="csv-file-input" type="file" accept=".csv,.json" />
-            </label>
+        <!-- Hero Foot -->
+        <div class="hero-foot" id="hero-foot">
+          <p class="hero-tag">Find a lease without <span class="dim">hidden fees</span><span class="spark">.</span></p>
+          <p class="hero-lede">
+            Built for Cal Poly SLO students. Evaluates true effective monthly cost, commute time, strict lease dealbreakers, and scam red flags before you ever message a landlord.
+          </p>
+          <div class="hero-ctas">
+            <a class="cta-pill cta-ink" href="#search">
+              <span>Search SLO Rentals</span>
+              <span class="cta-ar">→</span>
+            </a>
+            <button id="open-calc-hero" class="ghost-pill" type="button">Lease Split Calc</button>
           </div>
-
-          <div class="form-actions">
-            <button id="run-search-btn" type="submit" class="btn btn-primary">
-              Evaluate SLO Listings
-            </button>
-            <button id="load-saved-btn" type="button" class="btn btn-secondary">
-              Load Saved Qualified Matches
-            </button>
-          </div>
-        </form>
-
-        <div id="run-stats" class="run-stats hidden"></div>
-      </div>
-
-      <!-- Ranked Safe Matches (T7) -->
-      <div class="section-header">
-        <h2>2. Verified Safe Matches (Ranked)</h2>
-        <span id="match-count" class="pill">0 matches</span>
-      </div>
-      <div id="matches-list" class="cards-grid"></div>
-
-      <!-- Drafted Landlord Inquiry Panel (T8 & T9) -->
-      <div id="inquiry-panel" class="card hidden">
-        <h2>3. Draft Landlord Inquiry (T8 / T9)</h2>
-        <p class="muted">
-          Review and edit your personalized inquiry below. This agent <strong>never</strong> sends emails automatically — you approve and copy it when ready.
-        </p>
-        <div id="inquiry-meta" class="meta-line"></div>
-        <label class="field">
-          <span>Subject</span>
-          <input id="draft-subject" type="text" />
-        </label>
-        <label class="field">
-          <span>Email Body</span>
-          <textarea id="draft-body" rows="8"></textarea>
-        </label>
-        <div class="form-actions">
-          <button id="approve-copy-btn" type="button" class="btn btn-primary">
-            Approve &amp; Copy Email
-          </button>
-          <button id="close-inquiry-btn" type="button" class="btn btn-secondary">
-            Close
-          </button>
         </div>
       </div>
     </section>
 
-    <!-- ==================== ADMIN / REVIEWER VIEW ==================== -->
-    <section id="view-admin" class="view-section hidden">
-      <!-- Sign-In Card -->
-      <div id="admin-login-card" class="card narrow-card">
-        <h2>Reviewer Sign-In</h2>
+    <!-- ═════════ SCROLL-LINKED MARQUEE ═════════ -->
+    <div class="marq-bar" aria-hidden="true">
+      <div class="marq-track" id="marq-track"></div>
+    </div>
+
+    <!-- ═════════ 01 LIVE MAP & SEARCH WORKSPACE ═════════ -->
+    <section class="workspace-section" id="search" data-theme="light">
+      <div class="ws-head wrap">
+        <div>
+          <div class="eyebrow"><span class="i">( 01 )</span>Live Search &amp; SLO Map</div>
+          <h2 class="h2-sm">Verified safe matches<span class="spark">.</span></h2>
+        </div>
+        <div class="ws-head-actions">
+          <button id="open-calculator-btn" class="ghost-pill ghost-sm" type="button">Roommate Split Calc ↗</button>
+          <button id="run-search-btn" class="cta-pill cta-ink" type="button">
+            <span id="run-btn-label">Evaluate SLO Listings</span>
+            <span class="cta-ar">→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Morphing Spring Mega-Menu Filter Bar (vividsites vs-mega-menu) -->
+      <div id="filter-bar" class="filter-bar">
+        <div class="search-box">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="search-text" type="text" placeholder="Filter by SLO neighborhood or street..." />
+          <button id="clear-search-btn" class="icon-clear hidden" type="button" aria-label="Clear search">×</button>
+        </div>
+
+        <nav class="vs-mega-menu" id="filter-mega-menu" aria-label="Rental Filters" data-open="hover">
+          <div class="vs-mega-menu-bar">
+            <ul class="vs-mega-menu-list">
+              <!-- Panel 1: Budget -->
+              <li>
+                <button class="vs-mega-menu-trigger" type="button">
+                  <span class="mono-muted">Max:</span>
+                  <span id="label-dd-price" class="pill-strong">≤ $2,400</span>
+                </button>
+                <div class="vs-mega-menu-content">
+                  <div class="vs-mega-menu-cols">
+                    <div class="vs-mega-menu-col vs-mega-menu-col--art">
+                      <span class="vs-mega-menu-art vs-mega-menu-art--bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                      <p class="vs-mega-menu-kicker">SLO Cost</p>
+                      <p class="popover-hint">Includes rent, missing utilities, parking &amp; commute.</p>
+                    </div>
+                    <div class="vs-mega-menu-col vs-mega-menu-col--wide">
+                      <p class="vs-mega-menu-kicker">Effective Monthly Budget</p>
+                      <div class="histogram" id="price-histogram" aria-hidden="true"></div>
+                      <input id="budget-slider" type="range" min="1000" max="5500" step="50" value="2400" class="range-slider" />
+                      <div class="range-labels">
+                        <span>$1,000</span>
+                        <span id="slider-val-label" class="range-current">$2,400/mo</span>
+                        <span>$5,500+</span>
+                      </div>
+                      <div class="two-col-inputs">
+                        <label class="mini-field">
+                          <span>Min Rent</span>
+                          <input id="min-budget" type="number" min="0" step="50" placeholder="No min" />
+                        </label>
+                        <span class="dash">–</span>
+                        <label class="mini-field">
+                          <span>Max Effective Budget</span>
+                          <input id="max-budget" type="number" min="600" max="8000" step="50" value="2400" />
+                        </label>
+                      </div>
+                      <button type="button" class="btn btn-primary btn-full popover-apply">Apply Budget</button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+
+              <!-- Panel 2: Beds & Baths -->
+              <li>
+                <button class="vs-mega-menu-trigger" type="button">
+                  <span>Beds &amp; baths</span>
+                  <span id="label-dd-beds" class="pill-chip">Any</span>
+                </button>
+                <div class="vs-mega-menu-content">
+                  <div class="vs-mega-menu-cols">
+                    <div class="vs-mega-menu-col vs-mega-menu-col--art">
+                      <span class="vs-mega-menu-art vs-mega-menu-art--tiles" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                      <p class="vs-mega-menu-kicker">Floorplans</p>
+                      <p class="popover-hint">Studios through 4BR houses across SLO.</p>
+                    </div>
+                    <div class="vs-mega-menu-col vs-mega-menu-col--wide">
+                      <p class="vs-mega-menu-kicker">Number of Bedrooms</p>
+                      <div class="seg-group" id="beds-seg">
+                        <button type="button" class="seg-btn active" data-beds="0">Any</button>
+                        <button type="button" class="seg-btn" data-beds="1">1+</button>
+                        <button type="button" class="seg-btn" data-beds="2">2+</button>
+                        <button type="button" class="seg-btn" data-beds="3">3+</button>
+                        <button type="button" class="seg-btn" data-beds="4">4+</button>
+                      </div>
+                      <label class="check-row" style="margin-bottom: 12px;">
+                        <input id="exact-beds" type="checkbox" />
+                        <span>Use exact bedroom match</span>
+                      </label>
+                      <p class="vs-mega-menu-kicker">Number of Bathrooms</p>
+                      <div class="seg-group" id="baths-seg">
+                        <button type="button" class="seg-btn active" data-baths="0">Any</button>
+                        <button type="button" class="seg-btn" data-baths="1">1+</button>
+                        <button type="button" class="seg-btn" data-baths="1.5">1.5+</button>
+                        <button type="button" class="seg-btn" data-baths="2">2+</button>
+                        <button type="button" class="seg-btn" data-baths="3">3+</button>
+                      </div>
+                      <button type="button" class="btn btn-primary btn-full popover-apply">Apply Beds &amp; Baths</button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+
+              <!-- Panel 3: Dealbreakers -->
+              <li>
+                <button class="vs-mega-menu-trigger" type="button">
+                  <span>Dealbreakers</span>
+                  <span id="label-dd-rules" class="pill-chip-green">(2 active)</span>
+                </button>
+                <div class="vs-mega-menu-content">
+                  <div class="vs-mega-menu-cols">
+                    <div class="vs-mega-menu-col vs-mega-menu-col--art">
+                      <span class="vs-mega-menu-art vs-mega-menu-art--stack" aria-hidden="true"><i></i><i></i><i></i></span>
+                      <p class="vs-mega-menu-kicker">Lease Rules</p>
+                      <p class="popover-hint">Rentals failing any active requirement are hidden.</p>
+                    </div>
+                    <div class="vs-mega-menu-col vs-mega-menu-col--wide">
+                      <p class="vs-mega-menu-kicker">Must-Have Lease Requirements</p>
+                      <div class="tile-grid">
+                        <button type="button" id="tile-sublease" class="select-tile selected">
+                          <span class="tile-icon">📄</span>
+                          <span class="tile-title">Sublease Allowed</span>
+                          <span class="tile-sub">Drop no-sublease leases</span>
+                        </button>
+                        <button type="button" id="tile-pets" class="select-tile">
+                          <span class="tile-icon">🐾</span>
+                          <span class="tile-title">Pet-Friendly</span>
+                          <span class="tile-sub">Drop no-pets leases</span>
+                        </button>
+                        <button type="button" id="tile-vehicle" class="select-tile selected">
+                          <span class="tile-icon">🚗</span>
+                          <span class="tile-title">I Have a Car</span>
+                          <span class="tile-sub">Adds parking if missing</span>
+                        </button>
+                        <button type="button" id="tile-commute" class="select-tile">
+                          <span class="tile-icon">🚌</span>
+                          <span class="tile-title">Allow &gt;30m Commute</span>
+                          <span class="tile-sub">Override 30-min cap</span>
+                        </button>
+                      </div>
+                      <button type="button" class="btn btn-primary btn-full popover-apply">Apply Dealbreakers</button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+
+              <!-- Panel 4: More Filters -->
+              <li>
+                <button class="vs-mega-menu-trigger" type="button">
+                  <span class="gold-dot-sm"></span>
+                  <span>More Filters</span>
+                </button>
+                <div class="vs-mega-menu-content">
+                  <div class="vs-mega-menu-cols">
+                    <div class="vs-mega-menu-col vs-mega-menu-col--art">
+                      <span class="vs-mega-menu-art vs-mega-menu-art--orbit" aria-hidden="true"><i></i><i></i><i></i></span>
+                      <p class="vs-mega-menu-kicker">Neighborhoods</p>
+                      <p class="popover-hint">Focus on a single SLO zone or upload your own CSV.</p>
+                    </div>
+                    <div class="vs-mega-menu-col vs-mega-menu-col--wide">
+                      <p class="vs-mega-menu-kicker">Preferred Amenities</p>
+                      <div class="chip-grid" id="amenity-chips" style="margin-bottom: 12px;">
+                        <button type="button" class="chip-toggle" data-amenity="in_unit_laundry">In-unit laundry</button>
+                        <button type="button" class="chip-toggle" data-amenity="off_street_parking">Off-street parking</button>
+                        <button type="button" class="chip-toggle" data-amenity="dishwasher">Dishwasher</button>
+                        <button type="button" class="chip-toggle" data-amenity="ac">A/C</button>
+                        <button type="button" class="chip-toggle" data-amenity="patio">Private patio</button>
+                      </div>
+                      <label class="mini-field">
+                        <span>SLO Neighborhood Focus</span>
+                        <select id="neighborhood-select">
+                          <option value="" selected>All San Luis Obispo</option>
+                          <option value="Foothill Boulevard Corridor">Foothill Boulevard Corridor</option>
+                          <option value="North Chorro / Hathway">North Chorro / Hathway</option>
+                          <option value="Downtown SLO / Mill Street">Downtown SLO / Mill Street</option>
+                          <option value="Laguna Lake / Madonna Road">Laguna Lake / Madonna Road</option>
+                          <option value="East SLO / Johnson Ave">East SLO / Johnson Ave</option>
+                          <option value="South Higuera / Broad St">South Higuera / Broad St</option>
+                        </select>
+                      </label>
+                      <label class="mini-field" style="margin-top: 10px;">
+                        <span>Optional: Upload Custom Listings (CSV / JSON)</span>
+                        <input id="csv-file-input" type="file" accept=".csv,.json" />
+                      </label>
+                      <button type="button" class="btn btn-primary btn-full popover-apply" style="margin-top: 12px;">Apply Filters</button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <div class="vs-mega-menu-end">
+              <button id="mega-eval-btn" class="vs-mega-menu-cta" type="button">Run Search</button>
+            </div>
+          </div>
+        </nav>
+
+        <div class="filter-right">
+          <button id="btn-center-calpoly" class="zone-btn" type="button">📍 Center Cal Poly</button>
+          <button id="btn-toggle-walkzone" class="zone-btn active" type="button">🌲 1-Mi Walk</button>
+          <button id="btn-toggle-bikezone" class="zone-btn" type="button">🚲 2-Mi Bike</button>
+        </div>
+      </div>
+
+      <!-- Split-Screen Map + Tiltable Editorial Rental Cards -->
+      <div class="split-workspace">
+        <aside class="map-pane">
+          <div class="hud-bar">
+            <div class="hud-card">
+              <span class="hud-title"><span class="ping-dot-sm"></span> CAL POLY SLO GRID</span>
+              <span class="hud-sep">|</span>
+              <span id="coords-display">35.305°N 120.663°W</span>
+            </div>
+            <div class="hud-sub">BENCHMARK: 1 GRAND AVE (DEXTER LAWN)</div>
+          </div>
+          <div id="slo-map" class="slo-map"></div>
+          <div class="map-footer">
+            <div class="legend-items">
+              <span><i class="dot dot-campus"></i> Cal Poly</span>
+              <span><i class="dot dot-match"></i> Verified Match</span>
+              <span><i class="dash-line"></i> 1-Mi Walk ($0)</span>
+            </div>
+            <span class="mono-muted">OpenStreetMap · SLO</span>
+          </div>
+        </aside>
+
+        <div class="feed-pane">
+          <div class="feed-header">
+            <div>
+              <span class="live-dot"></span>
+              <strong id="match-count">0 verified active matches</strong>
+              <span id="run-stats" class="run-stats-inline hidden"></span>
+            </div>
+            <div class="sort-block">
+              <label for="sort-select">SORT:</label>
+              <select id="sort-select">
+                <option value="rank">Best Match Score</option>
+                <option value="effective_asc">Lowest Effective Cost</option>
+                <option value="commute_asc">Closest to Cal Poly</option>
+                <option value="base_asc">Lowest Base Rent</option>
+              </select>
+            </div>
+          </div>
+          <!-- Result Category Switcher (Matches vs. Filtered Out + Safety Count) -->
+          <div id="result-tabs" class="result-tabs hidden">
+            <button id="rtab-matched" class="rtab rtab-green active" type="button">✓ Matched (0)</button>
+            <button id="rtab-filtered" class="rtab rtab-red" type="button">✕ Didn't Match (0)</button>
+            <span id="rtab-scams" class="rtab-shield hidden">🛡️ 0 Scams Blocked</span>
+          </div>
+          <div id="matches-list" class="feed-scroll"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════ 02 RENTER GUIDE — Plain-English Cost, Market & Safety Tabs ═════════ -->
+    <section class="rules-section wrap" id="rules" data-theme="light">
+      <div class="rules-grid">
+        <figure class="rules-photo" id="rules-photo">
+          <img src="assets/slo-apartments-editorial.jpg" alt="Sunlit San Luis Obispo student apartment courtyard" loading="lazy" />
+          <figcaption class="mono photo-cap">San Luis Obispo · Student Housing Guide</figcaption>
+        </figure>
+        <div>
+          <div class="eyebrow"><span class="i">( 02 )</span>Built for SLO Renters</div>
+          <h2 class="h2">No surprises on <span class="dim">move-in day</span><span class="spark">.</span></h2>
+
+          <div class="spring-seg" id="rules-seg" role="tablist">
+            <span class="seg-thumb" id="rules-thumb"></span>
+            <button role="tab" aria-selected="true" data-k="0">True Monthly Cost</button>
+            <button role="tab" aria-selected="false" data-k="1">SLO Rent Guide</button>
+            <button role="tab" aria-selected="false" data-k="2">Renter Safety</button>
+          </div>
+
+          <ul class="rules-list" id="rules-list"></ul>
+          <div class="rules-meta mono">
+            <span id="rules-when"></span>
+            <span id="rules-where"></span>
+          </div>
+          <p class="rules-note" id="rules-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════ 03 SPRING FAQ ═════════ -->
+    <section class="faq-section wrap" id="faq" data-theme="light">
+      <div class="faq-grid">
+        <div>
+          <div class="eyebrow"><span class="i">( 03 )</span>Before You Apply</div>
+          <h2 class="h2">Fair <span class="dim">questions</span><span class="spark">.</span></h2>
+        </div>
+        <div id="faqs">
+          <div class="qa">
+            <button type="button" aria-expanded="false">What is "effective monthly cost"?<span class="pl"></span></button>
+            <div class="ans"><p>Asking rent rarely tells the whole story. We estimate your true monthly total by adding any utilities not included in the lease, monthly parking fees or permits, and driving costs to campus (properties within a 1-mile walk or bike ride of Cal Poly have $0 commute cost).</p></div>
+          </div>
+          <div class="qa">
+            <button type="button" aria-expanded="false">Do you ever contact landlords for me?<span class="pl"></span></button>
+            <div class="ans"><p>Never. When you click Draft Inquiry, we write a personalized message you can edit and copy into your own email app. Nothing is ever sent without you.</p></div>
+          </div>
+          <div class="qa">
+            <button type="button" aria-expanded="false">How do you spot fake or scam listings?<span class="pl"></span></button>
+            <div class="ans"><p>Every listing is checked against typical San Luis Obispo neighborhood rents and screened for common scam warning signs—like requests for Zelle, wire transfers, or deposits before an in-person tour. Suspicious listings are filtered out or held for manual review before they ever reach your feed.</p></div>
+          </div>
+          <div class="qa">
+            <button type="button" aria-expanded="false">What if I spot an error on a listing?<span class="pl"></span></button>
+            <div class="ans"><p>Click the flag icon on any rental card to report inaccurate fees, lease terms, or anything that looks off. Our team reviews every report to keep the feed accurate for Cal Poly students.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════ NIGHT FOOTER ═════════ -->
+    <footer class="site-footer" data-theme="dark">
+      <div class="wrap">
+        <div class="foot-cols">
+          <div>
+            <p class="foot-tag">Search in minutes<span class="spark">.</span><br><span class="dim">Sign with confidence.</span></p>
+          </div>
+          <div>
+            <h4>Navigate</h4>
+            <a href="#top">Top</a>
+            <a href="#search">Live Map &amp; Search</a>
+            <a href="#rules">SLO Renter Guide</a>
+            <a href="#faq">FAQ</a>
+          </div>
+          <div>
+            <h4>San Luis Obispo</h4>
+            <p>Off-Campus Housing Matcher<br>Built for Cal Poly Students<br>San Luis Obispo, CA</p>
+          </div>
+        </div>
+        <div class="foot-mark" id="foot-mark" aria-label="Poly Matcher">POLY MATCHER</div>
+        <div class="foot-base mono">
+          <span>Poly Rental Matcher · Nicolas Gonzalez</span>
+          <span>N 35°18′ · W 120°39′ — San Luis Obispo, CA</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================== ACADEMIC LEASE SPLIT CALCULATOR MODAL (Rolling Spring Total) ==================== -->
+  <div id="lease-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <span class="modal-eyebrow">ROOMMATE SYNC</span>
+          <h2>Academic Term Lease Split</h2>
+          <p class="muted">Numbers roll smoothly as you adjust roommates or lease term</p>
+        </div>
+        <button id="close-lease-modal" class="icon-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="mini-field">
+          <span>Select Lease Span</span>
+          <div class="two-btn-grid">
+            <button id="term-9-btn" type="button" class="term-btn active">Academic (9 Mo)</button>
+            <button id="term-12-btn" type="button" class="term-btn">Full Year (12 Mo)</button>
+          </div>
+        </label>
+        <label class="mini-field" style="margin-top: 12px;">
+          <span>Total Monthly Effective Property Cost ($)</span>
+          <input id="calc-total-rent" type="number" value="3600" min="800" max="10000" step="50" />
+        </label>
+        <label class="mini-field" style="margin-top: 12px;">
+          <span>Roommates Sharing Space: <strong id="calc-roommates-label">3 Students</strong></span>
+          <input id="calc-roommates-range" type="range" min="1" max="6" value="3" class="range-slider" />
+        </label>
+        <div class="calc-summary">
+          <div class="calc-row">
+            <span>Per Student / Month:</span>
+            <strong id="calc-per-student" class="green-val">$1,200</strong>
+          </div>
+          <div class="calc-row calc-row-total">
+            <span>Academic Term Total / Student:</span>
+            <strong id="calc-term-total" class="gold-val">$10,800</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="apply-calc-budget" type="button" class="btn btn-primary btn-full">Apply Per-Student Budget to Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DRAFT INQUIRY MODAL (T8 / T9) ==================== -->
+  <div id="inquiry-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-eyebrow">MESSAGE LANDLORD</span>
+          <h2>Draft Landlord Inquiry</h2>
+          <p id="inquiry-meta" class="muted"></p>
+        </div>
+        <button id="close-inquiry-btn" class="icon-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="guardrail-note">
+          🔒 <strong>You're in control:</strong> We never send emails on your behalf. Edit anything below and copy it into your email app when you're ready.
+        </div>
+        <label class="mini-field">
+          <span>Subject</span>
+          <input id="draft-subject" type="text" />
+        </label>
+        <label class="mini-field" style="margin-top: 12px;">
+          <span>Email Body</span>
+          <textarea id="draft-body" rows="9"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button id="approve-copy-btn" type="button" class="btn btn-primary">Approve &amp; Copy Email</button>
+        <button id="cancel-inquiry-btn" type="button" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== REVIEWER / ADMIN WORKSPACE ==================== -->
+  <section id="view-admin" class="admin-workspace hidden" data-theme="light">
+    <div class="admin-container">
+      <div class="admin-back-row">
+        <button id="back-to-student-btn" class="ghost-pill ghost-sm" type="button">← Back to Student Search</button>
+      </div>
+
+      <div id="admin-login-card" class="admin-card narrow-card">
+        <h2>Reviewer Access Sign-In</h2>
         <p class="muted">
           Only signed-in reviewers (Nicolas Gonzalez) can view flagged fraud audits, decide held listings, toggle lessons, or change system limits.
         </p>
         <form id="login-form" class="stack">
-          <label class="field">
+          <label class="mini-field">
             <span>Reviewer Email</span>
             <input id="login-email" type="email" required placeholder="you@calpoly.edu" />
           </label>
-          <label class="field">
+          <label class="mini-field">
             <span>Password</span>
             <input id="login-password" type="password" required />
           </label>
-          <button type="submit" class="btn btn-primary">Sign In</button>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
         </form>
       </div>
 
-      <!-- Signed-In Admin Dashboard -->
       <div id="admin-dashboard" class="hidden">
-        <div class="card admin-topbar">
+        <div class="admin-card admin-topbar">
           <div>
             <h2>Reviewer Control Center</h2>
             <p id="admin-user-label" class="muted"></p>
           </div>
-          <div class="form-actions">
+          <div class="btn-row">
             <button id="refresh-admin-btn" type="button" class="btn btn-secondary">Refresh All</button>
             <button id="logout-btn" type="button" class="btn btn-danger">Sign Out</button>
           </div>
         </div>
 
-        <!-- Permissions & Off Switch -->
-        <div class="card">
+        <div class="admin-card">
           <h3>Permissions, Limits &amp; Off Switch</h3>
-          <p class="muted">
-            Every change requires a reason and takes effect on the very next agent run. Turning <strong>Agent Paused</strong> to <code>true</code> immediately halts all AI calls.
-          </p>
+          <p class="muted">Every change requires a reason and takes effect immediately. Setting <strong>Agent Paused</strong> to <code>true</code> halts all AI calls.</p>
           <div id="settings-list" class="stack"></div>
         </div>
 
-        <!-- Held Listings Review Queue -->
-        <div class="card">
+        <div class="admin-card">
           <h3>Ambiguous &amp; Held Listings Review Queue</h3>
-          <p class="muted">
-            Click <strong>Resume (Mark Safe)</strong> or <strong>End (Confirm Scam)</strong> with a reason. Every decision automatically records a trusted Lesson Learned.
-          </p>
+          <p class="muted">Click <strong>Resume (Mark Safe)</strong> or <strong>End (Confirm Scam)</strong> with a reason. Every decision automatically records a Lesson Learned.</p>
           <div id="held-list" class="stack"></div>
         </div>
 
-        <!-- Lessons Learned -->
-        <div class="card">
+        <div class="admin-card">
           <h3>Lessons Learned</h3>
-          <p class="muted">
-            Active lessons add caution on future runs. Switch any lesson off to make the agent forget it immediately.
-          </p>
+          <p class="muted">Active lessons add caution on future runs. Switch any lesson off to forget it immediately.</p>
           <div id="lessons-list" class="stack"></div>
         </div>
 
-        <!-- Student Reports -->
-        <div class="card">
+        <div class="admin-card">
           <h3>Student-Reported Listing Mistakes</h3>
           <div id="reports-list" class="stack"></div>
         </div>
       </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      BUS 4498 Term Project · Poly Rental Matcher (`our_team_agent`) · Owner: Nicolas Gonzalez · All data shown is demo/test data.
     </div>
-  </footer>
+  </section>
 
+  <script src="mega-menu.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

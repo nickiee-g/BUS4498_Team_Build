@@ -4,7 +4,7 @@
 
 ## What works now
 - **Website (GitHub Pages):** `https://nickiee-g.github.io/BUS4498_Team_Build/` *(enable GitHub Pages in repo Settings → Pages → Source: `main` branch `/ (root)` after pushing via GitHub Desktop)*
-- **Curated SLO Listings Dataset (Feature Group 1):** `our_team_agent/data/listings.csv` contains 28 made-up San Luis Obispo rental listings (`SLO-001` through `SLO-028`) covering clean matches, hidden-fee traps, strict lease dealbreakers, long commutes, clear scams (including a prompt-injection test), and ambiguous review cases.
+- **Curated SLO Listings Dataset (Feature Group 1):** `our_team_agent/data/listings.csv` contains 50 unique made-up San Luis Obispo rental listings (`SLO-001` through `SLO-050`) covering clean matches, hidden-fee traps, strict lease dealbreakers, long commutes, clear scams (including a prompt-injection test), and ambiguous review cases.
 - **Database Schema & Row-Level Security (Feature Group 2):** `supabase/migrations/001_initial_schema.sql` is applied in Supabase with 7 tables (`evaluated_listings`, `commute_cache`, `agent_settings`, `lessons`, `inquiry_drafts`, `listing_reports`, `api_usage_log`), unique constraints, database-level scam guardrails, and explicit RLS policies.
 - **Supabase Edge Functions (Feature Group 3 — Deployed & Verified):**
   - `agent` (Tasks T2–T6): Checks `paused` switch & $15/mo API cap, caches Google Maps commutes, runs OpenAI (primary) with automatic Google Gemini (`gemini-3.8-flash`) fallback, enforces all effective-cost math/dealbreakers/ranking in code, defends against prompt injection, and supports `dry_run: true` test mode.

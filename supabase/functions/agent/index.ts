@@ -700,7 +700,7 @@ Deno.serve(async (req: Request) => {
       output_tokens: 0,
     };
 
-    for (const listing of batch) {
+    const evaluateOne = async (listing: RawListing): Promise<Record<string, unknown>> => {
       const sourcesChecked: string[] = [
         "docs/effective_cost_and_scoring_rules.md",
         "docs/local_rent_reference.md",
@@ -741,8 +741,7 @@ Deno.serve(async (req: Request) => {
         if (!dryRun) {
           await supabase.from("evaluated_listings").upsert(record, { onConflict: "listing_id" });
         }
-        results.push(record);
-        continue;
+        return record;
       }
 
       // T4a: Commute lookup (Cache first -> Google Maps -> Fallback)
@@ -883,7 +882,15 @@ Deno.serve(async (req: Request) => {
       if (!dryRun) {
         await supabase.from("evaluated_listings").upsert(record, { onConflict: "listing_id" });
       }
-      results.push(record);
+      return record;
+    };
+
+    // Evaluate in parallel chunks of 6 so 50 listings finish quickly without timeouts
+    const CONCURRENCY = 6;
+    for (let i = 0; i < batch.length; i += CONCURRENCY) {
+      const chunk = batch.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.all(chunk.map(evaluateOne));
+      results.push(...chunkResults);
     }
 
     // Sort qualified matches highest rank_score first
