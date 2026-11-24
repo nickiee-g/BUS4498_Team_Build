@@ -725,6 +725,56 @@ document.getElementById("skip-seen-toggle").addEventListener("change", (e) => {
   uiState.skipPreviouslyRecommended = e.target.checked;
 });
 
+function resetAllFilters() {
+  closeAllPopovers();
+  // Budget
+  uiState.minBudget = 0;
+  minBudgetInput.value = "";
+  syncBudgetUI(2400);
+
+  // Beds & Baths
+  uiState.minBedrooms = 0;
+  uiState.exactBedrooms = false;
+  uiState.minBathrooms = 0;
+  document.getElementById("exact-beds").checked = false;
+  document.querySelectorAll("#beds-seg .seg-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.beds === "0");
+  });
+  document.querySelectorAll("#baths-seg .seg-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.baths === "0");
+  });
+
+  // Dealbreakers — all cleared so user manually chooses what they want
+  uiState.subleaseRequired = false;
+  uiState.petsRequired = false;
+  uiState.hasVehicle = false;
+  uiState.allowLongCommute = false;
+  ["tile-sublease", "tile-pets", "tile-vehicle", "tile-commute"].forEach((id) => {
+    document.getElementById(id).classList.remove("selected");
+  });
+
+  // Amenities, neighborhood, search text, sort, file upload & skip-seen toggle
+  uiState.selectedAmenities.clear();
+  document.querySelectorAll("#amenity-chips .chip-toggle").forEach((c) => c.classList.remove("selected"));
+  uiState.neighborhood = "";
+  document.getElementById("neighborhood-select").value = "";
+  uiState.searchText = "";
+  searchInput.value = "";
+  clearSearchBtn.classList.add("hidden");
+  uiState.sortBy = "rank";
+  document.getElementById("sort-select").value = "rank";
+  uiState.skipPreviouslyRecommended = false;
+  document.getElementById("skip-seen-toggle").checked = false;
+  csvFileInput.value = "";
+  loadedFileChip.classList.add("hidden");
+
+  updatePillLabels();
+  renderHistogram();
+  applyLocalFiltersAndRender();
+  showBanner("All filters cleared — select any budget, beds, or dealbreakers you want.", "info");
+}
+document.getElementById("reset-filters-btn").addEventListener("click", resetAllFilters);
+
 function updatePillLabels() {
   document.getElementById("label-dd-price").textContent = `≤ ${money(uiState.maxBudget)}`;
   const bedStr = uiState.minBedrooms === 0 ? "Any" : `${uiState.minBedrooms}${uiState.exactBedrooms ? "" : "+"} Bed`;
