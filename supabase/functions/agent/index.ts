@@ -46,11 +46,11 @@ const ALLOWED_MODELS: Record<string, { provider: "openai" | "gemini"; apiModel: 
   "gpt-4o-mini": { provider: "openai", apiModel: "gpt-4o-mini" },
   "gpt-4o": { provider: "openai", apiModel: "gpt-4o" },
   "gpt-5-mini": { provider: "openai", apiModel: "gpt-5-mini" },
-  "gemini-2.5-flash": { provider: "gemini", apiModel: "gemini-2.5-flash" },
-  "gemini-2.5-flash-lite": { provider: "gemini", apiModel: "gemini-2.5-flash-lite" },
+  "gemini-2.5-flash": { provider: "gemini", apiModel: "gemini-3.8-flash" },
   "gemini-3.8-flash": { provider: "gemini", apiModel: "gemini-3.8-flash" },
-  "gemini-2.5-pro": { provider: "gemini", apiModel: "gemini-2.5-pro" },
-  "gemini-2.0-flash": { provider: "gemini", apiModel: "gemini-2.0-flash" },
+  "gemini-3.5-flash-lite": { provider: "gemini", apiModel: "gemini-3.5-flash-lite" },
+  "gemini-3.1-pro-preview": { provider: "gemini", apiModel: "gemini-3.1-pro-preview" },
+  "gemini-2.5-pro": { provider: "gemini", apiModel: "gemini-3.1-pro-preview" },
 };
 
 // San Luis Obispo Rent Reference Table (from our_team_agent/docs/local_rent_reference.md)
@@ -596,8 +596,8 @@ Description: ${listing.description_and_lease_text}
     errors.push("OPENAI_API_KEY not set");
   }
 
-  // Backup (or requested): Google Gemini
-  if (geminiKey) {
+  // Backup (or requested): Google Gemini (do not silently fall back if an OpenAI model was explicitly requested for comparison)
+  if (geminiKey && (!chosen || chosen.provider === "gemini")) {
     const geminiModel = chosen?.provider === "gemini" ? chosen.apiModel : "gemini-3.8-flash";
     try {
       const resp = await fetch(
@@ -620,7 +620,7 @@ Description: ${listing.description_and_lease_text}
         const parsed = JSON.parse(text) as AIExtraction;
         return {
           extraction: parsed,
-          modelUsed: requestedModel || geminiModel,
+          modelUsed: geminiModel,
           inputTokens: data?.usageMetadata?.promptTokenCount ?? 0,
           outputTokens: data?.usageMetadata?.candidatesTokenCount ?? 0,
           provider: "gemini",
@@ -632,7 +632,7 @@ Description: ${listing.description_and_lease_text}
     } catch (e) {
       errors.push(`Gemini exception: ${e instanceof Error ? e.message : String(e)}`);
     }
-  } else {
+  } else if (!geminiKey) {
     errors.push("GEMINI_API_KEY not set");
   }
 

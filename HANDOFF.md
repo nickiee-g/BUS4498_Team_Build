@@ -2,7 +2,7 @@
 
 ## How to test
 - App link: https://nickiee-g.github.io/BUS4498_Team_Build/
-- Test login: Student search requires no login. For the Reviewer & Admin Control Center (`ID: Reviewer` in the top navigation bar, used in N5 and E3), use: `[FILL IN TEST REVIEWER EMAIL]` / `[FILL IN TEST REVIEWER PASSWORD]`
+- Test login: Student search requires no login. For the Reviewer & Admin Control Center (`ID: Reviewer` in the top navigation bar, used in N5 and E3), use: `ngonza51@calpoly.edu` / `PolyMatcher2026!`
 - To run a case:
   1. Open the App link and scroll to **01 Live Search & SLO Map** (or click **Search SLO Rentals**).
   2. Set any filters noted in the case (default filters are Max Effective Budget `$2,400`, Beds `Any`, Dealbreakers `Sublease Allowed` ON and `I Have a Car` ON).
