@@ -896,7 +896,9 @@ async function runEvaluation() {
     applyLocalFiltersAndRender();
 
     const sec = ((data.ms || 0) / 1000).toFixed(1);
-    statsInline.textContent = `· ${allResults.length} checked in ${sec}s${heldCount ? ` (${heldCount} in review)` : ""}`;
+    const skillTag = data.skill_used ? " · Skill active" : "";
+    const lessonTag = data.lessons_applied ? ` · ${data.lessons_applied} lesson(s) applied` : "";
+    statsInline.textContent = `· ${allResults.length} checked in ${sec}s${heldCount ? ` (${heldCount} in review)` : ""}${skillTag}${lessonTag}`;
     statsInline.classList.remove("hidden");
 
     showBanner(
@@ -1070,6 +1072,12 @@ function renderMatches(listings) {
       if (am.dishwasher) chips.appendChild(el("span", "card-chip", "Dishwasher"));
       if (am.patio) chips.appendChild(el("span", "card-chip", "Patio"));
       if (item.price_realism_label) chips.appendChild(el("span", "card-chip green", item.price_realism_label));
+      const sources = Array.isArray(item.sources_checked) ? item.sources_checked : [];
+      const commuteSrc = sources.find((s) => String(s).startsWith("commute:"));
+      if (commuteSrc === "commute:google_maps_routes") chips.appendChild(el("span", "card-chip green", "Google Maps API"));
+      else if (commuteSrc === "commute:osm_osrm_routes") chips.appendChild(el("span", "card-chip green", "OSM/OSRM Maps API"));
+      else if (commuteSrc === "commute:commute_cache") chips.appendChild(el("span", "card-chip", "Cached Route"));
+      if (sources.some((s) => String(s).startsWith("skill:"))) chips.appendChild(el("span", "card-chip", "Skill Verified"));
       surf.appendChild(chips);
     }
 
@@ -1124,6 +1132,12 @@ async function handleDraftInquiry(listing, isDryRun, btn) {
         listing: isDryRun ? listing : undefined,
         student_name: "Cal Poly Student",
         move_in_date: "September 1, 2026",
+        student_criteria: {
+          max_budget: uiState.maxBudget,
+          sublease_required: uiState.subleaseRequired,
+          pets_required: uiState.petsRequired,
+          has_vehicle: uiState.hasVehicle,
+        },
       }),
     });
     const data = await resp.json();
@@ -1133,6 +1147,11 @@ async function handleDraftInquiry(listing, isDryRun, btn) {
     document.getElementById("inquiry-meta").textContent =
       `To: ${activeDraft.landlord_contact} · Listing: ${activeDraft.listing_id} · Status: ${activeDraft.status}` +
       (data.status === "duplicate" ? " (Existing draft loaded)" : "");
+    const memNotes = Array.isArray(data.memory_used) && data.memory_used.length > 0
+      ? ` · Session memory used: ${data.memory_used.join(", ")}`
+      : "";
+    document.getElementById("inquiry-why").textContent =
+      `Why proposed: Verified safe match (Score ${Math.round(Number(listing.rank_score || 0))}/100, effective cost ${money(listing.effective_monthly_cost)}/mo within ${money(uiState.maxBudget)}/mo budget, ~${listing.commute_minutes ?? "?"} min commute)${memNotes}.`;
     document.getElementById("draft-subject").value = activeDraft.subject || "";
     document.getElementById("draft-body").value = activeDraft.body || "";
     document.getElementById("inquiry-modal").classList.remove("hidden");
@@ -1147,6 +1166,15 @@ async function handleDraftInquiry(listing, isDryRun, btn) {
 function closeInquiryModal() { document.getElementById("inquiry-modal").classList.add("hidden"); }
 document.getElementById("close-inquiry-btn").addEventListener("click", closeInquiryModal);
 document.getElementById("cancel-inquiry-btn").addEventListener("click", closeInquiryModal);
+
+document.getElementById("reject-inquiry-btn").addEventListener("click", async () => {
+  if (!activeDraft) return;
+  if (activeDraft.id) {
+    await sb.from("inquiry_drafts").update({ status: "cancelled" }).eq("id", activeDraft.id);
+  }
+  showBanner("Draft rejected and marked cancelled. No email was sent.", "warn");
+  closeInquiryModal();
+});
 
 document.getElementById("approve-copy-btn").addEventListener("click", async () => {
   if (!activeDraft) return;

@@ -502,8 +502,9 @@
       </div>
       <div class="modal-body">
         <div class="guardrail-note">
-          🔒 <strong>You're in control:</strong> We never send emails on your behalf. Edit anything below and copy it into your email app when you're ready.
+          🔒 <strong>Human Checkpoint:</strong> We never send emails automatically. Review why this match was proposed, edit the draft below, then approve or reject it.
         </div>
+        <div id="inquiry-why" class="meta-line" style="margin-bottom: 12px;"></div>
         <label class="mini-field">
           <span>Subject</span>
           <input id="draft-subject" type="text" />
@@ -515,6 +516,7 @@
       </div>
       <div class="modal-footer">
         <button id="approve-copy-btn" type="button" class="btn btn-primary">Approve &amp; Copy Email</button>
+        <button id="reject-inquiry-btn" type="button" class="btn btn-danger">Reject Draft</button>
         <button id="cancel-inquiry-btn" type="button" class="btn btn-secondary">Close</button>
       </div>
     </div>
