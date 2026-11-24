@@ -305,6 +305,10 @@
         </nav>
 
         <div class="filter-right">
+          <span id="loaded-file-chip" class="zone-btn active hidden" title="Custom listings file loaded">
+            <span id="loaded-file-name"></span>
+            <button id="clear-file-btn" type="button" style="background:none;border:0;color:inherit;cursor:pointer;font-weight:700;margin-left:4px;" aria-label="Clear uploaded file">×</button>
+          </span>
           <button id="btn-center-calpoly" class="zone-btn" type="button">📍 Center Cal Poly</button>
           <button id="btn-toggle-walkzone" class="zone-btn active" type="button">🌲 1-Mi Walk</button>
           <button id="btn-toggle-bikezone" class="zone-btn" type="button">🚲 2-Mi Bike</button>
@@ -350,10 +354,11 @@
               </select>
             </div>
           </div>
-          <!-- Result Category Switcher (Matches vs. Filtered Out + Safety Count) -->
+          <!-- Result Category Switcher (Matches vs. Filtered Out + Safety/Review Counts) -->
           <div id="result-tabs" class="result-tabs hidden">
             <button id="rtab-matched" class="rtab rtab-green active" type="button">✓ Matched (0)</button>
             <button id="rtab-filtered" class="rtab rtab-red" type="button">✕ Didn't Match (0)</button>
+            <span id="rtab-held" class="rtab-shield hidden" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">⏳ 0 Held for Review</span>
             <span id="rtab-scams" class="rtab-shield hidden">🛡️ 0 Scams Blocked</span>
           </div>
           <div id="matches-list" class="feed-scroll"></div>

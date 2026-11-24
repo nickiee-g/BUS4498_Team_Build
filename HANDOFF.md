@@ -2,16 +2,16 @@
 
 ## How to test
 - App link: https://nickiee-g.github.io/BUS4498_Team_Build/
-- Test login: Student search requires no login. For the Reviewer & Admin Control Center (`ID: Reviewer` in the top navigation bar, used in N5 and E3), use: `ngonza51@calpoly.edu` / `PolyMatcher2026!`
+- Test login: Student search requires no login. For the Reviewer & Admin Control Center (`ID: Reviewer` in the top navigation bar, used in N5 and E3), use the dedicated demo account: `reviewer-demo@polymatcher.test` / `PolyMatcher2026!`
 - To run a case:
   1. Open the App link and scroll to **01 Live Search & SLO Map** (or click **Search SLO Rentals**).
   2. Set any filters noted in the case (default filters are Max Effective Budget `$2,400`, Beds `Any`, Dealbreakers `Sublease Allowed` ON and `I Have a Car` ON).
-  3. Open **More Filters** in the filter bar, click **Upload Custom Listings (CSV / JSON)**, and select the file from the repository's `test-data/` folder.
+  3. Open **More Filters** in the filter bar, click **Upload Custom Listings (CSV / JSON)**, and select the file from the repository's `test-data/` folder. A `📄 <filename>` chip appears in the filter bar once loaded (click `×` on the chip to clear it).
   4. Click **Evaluate SLO Listings** (or **Run Search**).
 - Where to see the result:
-  - **Student results:** Under **01 Live Search & SLO Map**, check the `✓ Matched`, `✕ Didn't Match`, and `🛡️ Scams Blocked` tabs, the status line next to the match count (`Skill active`, `in review`, `lesson(s) applied`), and the badges on each listing card (`Google Maps API` / `OSM/OSRM Maps API` / `Cached Route`, `Skill Verified`).
+  - **Student results:** Under **01 Live Search & SLO Map**, check the `✓ Matched`, `✕ Didn't Match`, `⏳ Held for Review`, and `🛡️ Scams Blocked` indicators (when 0 listings match, the feed automatically displays the filtered cards or explains why items were blocked/held), the status line next to the match count (`Skill active`, `in review`, `lesson(s) applied`), and the badges on each listing card (`Google Maps API` / `OSM/OSRM Maps API` / `Cached Route`, `Skill Verified`).
   - **Human checkpoints:** Click **Draft Inquiry** on any matched card for the student email checkpoint, or click **ID: Reviewer** in the top navigation bar to view the **Ambiguous & Held Listings Review Queue** and **Lessons Learned**.
-- To reset between cases: Refresh the page (or select the next CSV file in **More Filters -> Upload Custom Listings**) and restore default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). In the Reviewer panel, you can toggle any test lesson **Off** under **Lessons Learned** when done.
+- To reset between cases: Click `×` on the `📄 <filename>` chip (or refresh the page), select the next CSV file in **More Filters -> Upload Custom Listings**, and restore default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). In the Reviewer panel, you can toggle any test lesson **Off** under **Lessons Learned** when done.
 
 ## Test cases
 
@@ -19,7 +19,7 @@
 - Shows: External tool (live Maps/Routing API commute lookup) + Skill (`our_team_agent/agent/skills/slo-rental-deal-evaluator/SKILL.md`)
 - Input: `test-data/N1_clean_slo_match.csv`
 - Steps: Keep default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). Under **More Filters**, upload `test-data/N1_clean_slo_match.csv` and click **Evaluate SLO Listings**.
-- Expected result: `SLO-001` qualifies and appears in the `✓ Matched` tab with a full effective monthly cost breakdown (base rent `$1,850` + unincluded utilities `$105` + `$0` parking + `$0` walk-zone commute = `$1,955/mo`), a `Skill Verified` badge, and a real external route badge (`Google Maps API` or `OSM/OSRM Maps API` on first lookup, or `Cached Route` if previously cached). The status line shows `Skill active`.
+- Expected result: `SLO-001` qualifies and appears in the `✓ Matched` tab with a full effective monthly cost breakdown (base rent `$1,850` + `$105` unincluded utilities + `$0` parking + routed commute cost, totaling under `$2,400/mo`), a `Skill Verified` badge, and a real external route badge (`Google Maps API` or `OSM/OSRM Maps API` on first lookup, or `Cached Route` if previously cached). The status line shows `Skill active`.
 
 ### N2 (normal): Hidden utility and parking fees push listing over budget
 - Shows: Skill (`SKILL.md` utility/parking extraction and deterministic effective cost math)
@@ -59,7 +59,7 @@
 - Shows: Edge case (duplicate + cross-listing scammer) + Memory within a session
 - Input: `test-data/E2_duplicate_and_repeat_scammer.csv`
 - Steps: With default filters, upload `test-data/E2_duplicate_and_repeat_scammer.csv` and click **Evaluate SLO Listings**.
-- Expected result: `SLO-001` qualifies once while its duplicate row in the same CSV is skipped (`✕ Didn't Match` with duplicate-listing reason). `SLO-021` is blocked as a scam (`🛡️ 1 Scam Blocked`), and `SLO-051` (which looks normal on its own but shares the exact same `whatsapp: +1-555-0199` contact found on `SLO-021` earlier in the run) is held for review (`1 in review`) rather than recommended to students.
+- Expected result: `SLO-001` qualifies once while its duplicate row in the same CSV is skipped (`✕ Didn't Match` with duplicate-listing reason). `SLO-021` is blocked as a scam, and `SLO-051` (which looks normal on its own but shares the exact same `whatsapp: +1-555-0199` contact flagged on `SLO-021` earlier in the same run) is caught by within-session memory and blocked as a scam (`🛡️ 2 Scams Blocked`) or held for review (`⏳ Held for Review`) rather than appearing in `✓ Matched`.
 
 ### E3 (edge): Incomplete / ambiguous HOA sublease and pet policy
 - Shows: Edge case (missing/vague lease terms) + Human checkpoint

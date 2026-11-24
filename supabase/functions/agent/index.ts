@@ -96,26 +96,12 @@ async function loadSkillInstructions(): Promise<{ text: string; loadedFrom: stri
 }
 
 async function geocodeSloAddress(cleanedAddr: string): Promise<{ lat: number; lon: number } | null> {
-  // 1. US Census Geocoder (reliable from cloud IPs, supports US street address ranges)
-  try {
-    const censusUrl = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=json&address=${encodeURIComponent(cleanedAddr)}`;
-    const resp = await fetch(censusUrl, { headers: { Accept: "application/json" } });
-    if (resp.ok) {
-      const data = await resp.json();
-      const match = data?.result?.addressMatches?.[0]?.coordinates;
-      if (match?.y && match?.x) {
-        return { lat: Number(match.y), lon: Number(match.x) };
-      }
-    }
-  } catch {
-    // Try next geocoder
-  }
-
-  // 2. Photon (Komoot OpenStreetMap geocoder)
+  // 1. Photon (Komoot OpenStreetMap geocoder — fast ~150ms, reliable for SLO street ranges)
   try {
     const photonUrl = `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(cleanedAddr)}`;
     const resp = await fetch(photonUrl, {
       headers: { "User-Agent": "PolyRentalMatcher/1.0 (BUS4498 Cal Poly SLO)", Accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -128,11 +114,30 @@ async function geocodeSloAddress(cleanedAddr: string): Promise<{ lat: number; lo
     // Try next geocoder
   }
 
+  // 2. US Census Geocoder (supports US street address ranges)
+  try {
+    const censusUrl = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=json&address=${encodeURIComponent(cleanedAddr)}`;
+    const resp = await fetch(censusUrl, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const match = data?.result?.addressMatches?.[0]?.coordinates;
+      if (match?.y && match?.x) {
+        return { lat: Number(match.y), lon: Number(match.x) };
+      }
+    }
+  } catch {
+    // Try next geocoder
+  }
+
   // 3. OpenStreetMap Nominatim
   try {
     const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cleanedAddr)}`;
     const resp = await fetch(nomUrl, {
       headers: { "User-Agent": "PolyRentalMatcher/1.0 (BUS4498 Cal Poly SLO)", Accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -373,6 +378,7 @@ async function getCommute(
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${geo.lon},${geo.lat};${CAL_POLY_LON},${CAL_POLY_LAT}?overview=false`;
       const routeResp = await fetch(osrmUrl, {
         headers: { "User-Agent": "PolyRentalMatcher/1.0 (BUS4498 Cal Poly SLO Housing Evaluator)" },
+        signal: AbortSignal.timeout(4000),
       });
       if (routeResp.ok) {
         const routeData = await routeResp.json();
@@ -598,7 +604,7 @@ Description: ${listing.description_and_lease_text}
 
   // Backup (or requested): Google Gemini (do not silently fall back if an OpenAI model was explicitly requested for comparison)
   if (geminiKey && (!chosen || chosen.provider === "gemini")) {
-    const geminiModel = chosen?.provider === "gemini" ? chosen.apiModel : "gemini-3.8-flash";
+    const geminiModel = chosen?.provider === "gemini" ? chosen.apiModel : "gemini-3.5-flash-lite";
     try {
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
@@ -945,8 +951,9 @@ Deno.serve(async (req: Request) => {
       usageTotals.output_tokens += aiRes.outputTokens;
 
       const isProModel = aiRes.modelUsed.includes("pro") || aiRes.modelUsed === "gpt-4o";
-      const inRate = isProModel ? 1.25 : 0.15;
-      const outRate = isProModel ? 5.0 : 0.6;
+      const isLiteModel = aiRes.modelUsed.includes("lite");
+      const inRate = isProModel ? 1.25 : isLiteModel ? 0.1 : 0.15;
+      const outRate = isProModel ? 5.0 : isLiteModel ? 0.4 : 0.6;
       const estCost = (aiRes.inputTokens * inRate + aiRes.outputTokens * outRate) / 1_000_000;
       if (!dryRun) {
         await supabase.from("api_usage_log").insert({

@@ -31,7 +31,7 @@ Prevent students from signing leases with hidden monthly costs, unmanageable com
 1. Check commute_cache by normalized address first so the agent never re-queries a Maps API for an already cached address.
 2. On a cache miss, query the external routing service to Cal Poly (1 Grand Avenue, San Luis Obispo, CA 93407):
    - Primary: Google Maps Routes API (routes.googleapis.com/directions/v2:computeRoutes).
-   - Secondary external fallback: US Census / OpenStreetMap Geocoding + OSRM Public Routing API (router.project-osrm.org).
+   - Secondary external fallback: Photon (OpenStreetMap) / US Census Geocoding + OSRM Public Routing API (router.project-osrm.org).
    - Last-resort offline fallback: parse explicit distance/time from listing text or neighborhood baseline only if all external services fail.
 3. Save the result to commute_cache (unless dry_run = true).
 

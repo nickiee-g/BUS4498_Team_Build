@@ -482,6 +482,7 @@ const uiState = {
 
 let allLoadedMatches = [];
 let allFilteredOut = [];
+let lastRunSummary = { ran: false, scamsBlocked: 0, heldCount: 0, filteredCount: 0, qualifiedCount: 0 };
 let activeResultTab = "matched";
 let activeDraft = null;
 let currentSession = null;
@@ -703,6 +704,23 @@ clearSearchBtn.addEventListener("click", () => {
 document.getElementById("sort-select").addEventListener("change", (e) => { uiState.sortBy = e.target.value; applyLocalFiltersAndRender(); });
 document.getElementById("neighborhood-select").addEventListener("change", (e) => { uiState.neighborhood = e.target.value; applyLocalFiltersAndRender(); });
 
+const csvFileInput = document.getElementById("csv-file-input");
+const loadedFileChip = document.getElementById("loaded-file-chip");
+const loadedFileName = document.getElementById("loaded-file-name");
+csvFileInput.addEventListener("change", () => {
+  if (csvFileInput.files && csvFileInput.files.length > 0) {
+    loadedFileName.textContent = `📄 ${csvFileInput.files[0].name}`;
+    loadedFileChip.classList.remove("hidden");
+  } else {
+    loadedFileChip.classList.add("hidden");
+  }
+});
+document.getElementById("clear-file-btn").addEventListener("click", () => {
+  csvFileInput.value = "";
+  loadedFileChip.classList.add("hidden");
+  showBanner("Cleared custom file — next search will use the default 50 SLO listings.", "info");
+});
+
 function updatePillLabels() {
   document.getElementById("label-dd-price").textContent = `≤ ${money(uiState.maxBudget)}`;
   const bedStr = uiState.minBedrooms === 0 ? "Any" : `${uiState.minBedrooms}${uiState.exactBedrooms ? "" : "+"} Bed`;
@@ -838,18 +856,22 @@ async function runEvaluation() {
     const dryRun = false;
     const fileInput = document.getElementById("csv-file-input");
 
-    let csvText = "";
-    if (fileInput.files && fileInput.files.length > 0) csvText = await fileInput.files[0].text();
-    else {
+    const reqBody = { dry_run: dryRun, criteria };
+    if (fileInput.files && fileInput.files.length > 0) {
+      const f = fileInput.files[0];
+      const text = await f.text();
+      if (f.name.toLowerCase().endsWith(".json")) reqBody.listings = JSON.parse(text);
+      else reqBody.csv_text = text;
+    } else {
       const resp = await fetch("our_team_agent/data/listings.csv");
       if (!resp.ok) throw new Error("Could not load our_team_agent/data/listings.csv");
-      csvText = await resp.text();
+      reqBody.csv_text = await resp.text();
     }
 
     const fnResp = await fetch(`${SUPABASE_URL}/functions/v1/agent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
-      body: JSON.stringify({ dry_run: dryRun, criteria, csv_text: csvText }),
+      body: JSON.stringify(reqBody),
     });
     const data = await fnResp.json();
 
@@ -872,7 +894,14 @@ async function runEvaluation() {
 
     allLoadedMatches = qualified;
     allFilteredOut = safeFiltered;
-    activeResultTab = "matched";
+    lastRunSummary = {
+      ran: true,
+      scamsBlocked,
+      heldCount,
+      filteredCount: safeFiltered.length,
+      qualifiedCount: qualified.length,
+    };
+    activeResultTab = qualified.length === 0 && safeFiltered.length > 0 ? "filtered" : "matched";
     uiState.isDryRunResults = dryRun;
     if (!dryRun) document.getElementById("saved-count-pill").textContent = String(qualified.length);
 
@@ -880,11 +909,18 @@ async function runEvaluation() {
     const rtabs = document.getElementById("result-tabs");
     const rtabMatched = document.getElementById("rtab-matched");
     const rtabFiltered = document.getElementById("rtab-filtered");
+    const rtabHeld = document.getElementById("rtab-held");
     const rtabScams = document.getElementById("rtab-scams");
     rtabMatched.textContent = `✓ Matched (${qualified.length})`;
     rtabFiltered.textContent = `✕ Didn't Match (${safeFiltered.length})`;
-    rtabMatched.classList.add("active");
-    rtabFiltered.classList.remove("active");
+    rtabMatched.classList.toggle("active", activeResultTab === "matched");
+    rtabFiltered.classList.toggle("active", activeResultTab === "filtered");
+    if (heldCount > 0) {
+      rtabHeld.textContent = `⏳ ${heldCount} Held for Review`;
+      rtabHeld.classList.remove("hidden");
+    } else {
+      rtabHeld.classList.add("hidden");
+    }
     if (scamsBlocked > 0) {
       rtabScams.textContent = `🛡️ ${scamsBlocked} Scam${scamsBlocked === 1 ? "" : "s"} Blocked`;
       rtabScams.classList.remove("hidden");
@@ -901,12 +937,17 @@ async function runEvaluation() {
     statsInline.textContent = `· ${allResults.length} checked in ${sec}s${heldCount ? ` (${heldCount} in review)` : ""}${skillTag}${lessonTag}`;
     statsInline.classList.remove("hidden");
 
-    showBanner(
+    const summaryMsg =
       qualified.length > 0
         ? `Found ${qualified.length} verified safe match(es) within your ${money(uiState.maxBudget)} effective budget!`
-        : "No listings qualified under your criteria. Try raising your budget or relaxing a filter.",
-      qualified.length > 0 ? "ok" : "warn",
-    );
+        : scamsBlocked > 0 && heldCount === 0 && safeFiltered.length === 0
+        ? `Blocked ${scamsBlocked} high-risk scam listing(s) — none reached student matches.`
+        : heldCount > 0 && safeFiltered.length === 0
+        ? `Held ${heldCount} listing(s) for manual review in the Reviewer Control Center (ID: Reviewer).`
+        : safeFiltered.length > 0
+        ? `${safeFiltered.length} listing(s) did not meet your effective budget or lease dealbreakers.`
+        : "No listings qualified under your criteria. Try raising your budget or relaxing a filter.";
+    showBanner(summaryMsg, qualified.length > 0 ? "ok" : "warn");
   } catch (err) {
     showBanner(`Error running evaluation: ${err.message}`, "error");
   } finally {
@@ -972,15 +1013,24 @@ function renderMatches(listings) {
   clearEl(container);
 
   if (listings.length === 0) {
-    container.appendChild(
-      el(
-        "div",
-        "admin-card muted",
-        isFilteredView
-          ? "No filtered-out listings in this view."
-          : "No verified safe matches yet. Click 'Evaluate SLO Listings' above to run your search!",
-      ),
-    );
+    let emptyText = isFilteredView
+      ? "No filtered-out listings in this view."
+      : "No verified safe matches yet. Click 'Evaluate SLO Listings' above to run your search!";
+    if (!isFilteredView && lastRunSummary.ran) {
+      const parts = [];
+      if (lastRunSummary.scamsBlocked > 0) {
+        parts.push(
+          `🛡️ ${lastRunSummary.scamsBlocked} high-risk scam / prompt-injection listing${lastRunSummary.scamsBlocked === 1 ? " was" : "s were"} blocked and kept out of student matches.`,
+        );
+      }
+      if (lastRunSummary.heldCount > 0) {
+        parts.push(
+          `⏳ ${lastRunSummary.heldCount} listing${lastRunSummary.heldCount === 1 ? " was" : "s were"} held for manual human review (ambiguous pricing/fraud or unclear lease policy). Click "ID: Reviewer" in the top bar to inspect and sign off.`,
+        );
+      }
+      if (parts.length > 0) emptyText = parts.join(" ");
+    }
+    container.appendChild(el("div", "admin-card muted", emptyText));
     return;
   }
 
