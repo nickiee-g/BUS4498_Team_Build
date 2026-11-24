@@ -192,6 +192,7 @@ interface SearchCriteria {
   pets_required: boolean;
   has_vehicle: boolean;
   allow_long_commute?: boolean;
+  skip_previously_recommended?: boolean;
 }
 
 interface AIExtraction {
@@ -828,10 +829,31 @@ Deno.serve(async (req: Request) => {
       .limit(10);
     const activeLessons = (lessonRows ?? []).map((l) => `[${l.topic}] ${l.lesson}`);
 
+    // Cross-session memory: load previously evaluated listings & reviewer-confirmed scams
+    const { data: priorRows } = await supabase
+      .from("evaluated_listings")
+      .select("listing_id, listing_url, status, review_decision, contact_method");
+    const priorById = new Map<string, { status: string; review_decision: string | null }>();
+    const priorByUrl = new Map<string, { listing_id: string; status: string; review_decision: string | null }>();
+    const confirmedScamContacts = new Map<string, string>();
+    for (const r of priorRows ?? []) {
+      priorById.set(r.listing_id, { status: r.status, review_decision: r.review_decision });
+      if (r.listing_url) {
+        priorByUrl.set(String(r.listing_url).trim().toLowerCase(), {
+          listing_id: r.listing_id,
+          status: r.status,
+          review_decision: r.review_decision,
+        });
+      }
+      if (r.review_decision === "end" && r.contact_method) {
+        confirmedScamContacts.set(String(r.contact_method).trim().toLowerCase(), r.listing_id);
+      }
+    }
+
     // Within-session memory: track seen IDs/URLs and flagged scammer contacts across this run
     const seenIds = new Set<string>();
     const seenUrls = new Set<string>();
-    const flaggedScamContacts = new Map<string, string>();
+    const flaggedScamContacts = new Map<string, string>(confirmedScamContacts);
 
     const results: Record<string, unknown>[] = [];
     const usageTotals: UsageTotals = {
@@ -876,6 +898,56 @@ Deno.serve(async (req: Request) => {
       }
       seenIds.add(listing.listing_id);
       if (normUrl) seenUrls.add(normUrl);
+
+      // Cross-session memory check: detect listings already evaluated in a prior run
+      const priorMatch = priorById.get(listing.listing_id) ?? (normUrl ? priorByUrl.get(normUrl) : undefined);
+      if (priorMatch) {
+        sourcesChecked.push(`cross_session_memory:seen_earlier_${priorMatch.status}`);
+        // Always block listings previously confirmed as a scam by a human reviewer
+        if (priorMatch.review_decision === "end") {
+          sourcesChecked.push("cross_session_memory:confirmed_scam_blocked");
+          return {
+            listing_id: listing.listing_id,
+            listing_url: listing.listing_url,
+            title: listing.title,
+            neighborhood: listing.neighborhood,
+            address: listing.address,
+            bedrooms: listing.bedrooms,
+            bathrooms: listing.bathrooms,
+            base_rent: listing.base_rent,
+            effective_monthly_cost: listing.base_rent,
+            status: "discarded_scam",
+            hold_reason: `Cross-session memory: listing ${listing.listing_id} was previously confirmed as a scam by a reviewer and will never be recommended again.`,
+            fraud_risk_score: 0.99,
+            fraud_reasons: ["Previously confirmed scam by human reviewer."],
+            sources_checked: sourcesChecked,
+            contact_name: listing.contact_name,
+            contact_method: listing.contact_method,
+          };
+        }
+        // When skip_previously_recommended is enabled, skip listings already recommended in an earlier run (0 AI calls)
+        if (criteria.skip_previously_recommended && priorMatch.status === "qualified") {
+          sourcesChecked.push("cross_session_memory:duplicate_skipped");
+          return {
+            listing_id: listing.listing_id,
+            listing_url: listing.listing_url,
+            title: listing.title,
+            neighborhood: listing.neighborhood,
+            address: listing.address,
+            bedrooms: listing.bedrooms,
+            bathrooms: listing.bathrooms,
+            base_rent: listing.base_rent,
+            effective_monthly_cost: listing.base_rent,
+            status: "discarded_raw",
+            hold_reason: `Cross-session memory: listing ${listing.listing_id} was already recommended in a previous run — skipped so it is not recommended twice.`,
+            fraud_risk_score: 0,
+            fraud_reasons: [],
+            sources_checked: sourcesChecked,
+            contact_name: listing.contact_name,
+            contact_method: listing.contact_method,
+          };
+        }
+      }
 
       // T3: Deterministic Raw Filter (Code)
       if (

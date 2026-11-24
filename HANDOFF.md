@@ -11,7 +11,7 @@
 - Where to see the result:
   - **Student results:** Under **01 Live Search & SLO Map**, check the `✓ Matched`, `✕ Didn't Match`, `⏳ Held for Review`, and `🛡️ Scams Blocked` indicators (when 0 listings match, the feed automatically displays the filtered cards or explains why items were blocked/held), the status line next to the match count (`Skill active`, `in review`, `lesson(s) applied`), and the badges on each listing card (`Google Maps API` / `OSM/OSRM Maps API` / `Cached Route`, `Skill Verified`).
   - **Human checkpoints:** Click **Draft Inquiry** on any matched card for the student email checkpoint, or click **ID: Reviewer** in the top navigation bar to view the **Ambiguous & Held Listings Review Queue** and **Lessons Learned**.
-- To reset between cases: Click `×` on the `📄 <filename>` chip (or refresh the page), select the next CSV file in **More Filters -> Upload Custom Listings**, and restore default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). In the Reviewer panel, you can toggle any test lesson **Off** under **Lessons Learned** when done.
+- To reset between cases: Click `×` on the `📄 <filename>` chip (or refresh the page), select the next CSV file in **More Filters -> Upload Custom Listings**, and restore default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). For a full clean slate (clearing saved listings, drafts, commute cache, lessons, and reports), sign into **ID: Reviewer** and click **Reset Demo Data**.
 
 ## Test cases
 

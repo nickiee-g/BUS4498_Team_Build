@@ -292,6 +292,10 @@
                         <span>Optional: Upload Custom Listings (CSV / JSON)</span>
                         <input id="csv-file-input" type="file" accept=".csv,.json" />
                       </label>
+                      <label class="check-row" style="margin-top: 10px;">
+                        <input id="skip-seen-toggle" type="checkbox" />
+                        <span>Skip listings already recommended in a prior run</span>
+                      </label>
                       <button type="button" class="btn btn-primary btn-full popover-apply" style="margin-top: 12px;">Apply Filters</button>
                     </div>
                   </div>
@@ -560,6 +564,7 @@
           </div>
           <div class="btn-row">
             <button id="refresh-admin-btn" type="button" class="btn btn-secondary">Refresh All</button>
+            <button id="reset-demo-btn" type="button" class="btn btn-secondary" title="Clear saved listings, drafts, commute cache, lessons, and reports for a fresh demo">Reset Demo Data</button>
             <button id="logout-btn" type="button" class="btn btn-danger">Sign Out</button>
           </div>
         </div>

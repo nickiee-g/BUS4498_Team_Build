@@ -78,6 +78,34 @@ Deno.serve(async (req: Request) => {
 
     const reviewerEmail = userData.user.email || "Nicolas Gonzalez";
     const body = await req.json();
+
+    // Optional Reviewer-only action: reset demo data cleanly (never clears api_usage_log spend tracking)
+    if (body.action === "reset_demo") {
+      const { error: e1 } = await supabase.from("inquiry_drafts").delete().neq("listing_id", "__never__");
+      if (e1) throw new Error(`Failed clearing inquiry_drafts: ${e1.message}`);
+      const { error: e2 } = await supabase.from("evaluated_listings").delete().neq("listing_id", "__never__");
+      if (e2) throw new Error(`Failed clearing evaluated_listings: ${e2.message}`);
+      const { error: e3 } = await supabase.from("commute_cache").delete().neq("normalized_address", "__never__");
+      if (e3) throw new Error(`Failed clearing commute_cache: ${e3.message}`);
+      const { error: e4 } = await supabase.from("lessons").delete().neq("topic", "__never__");
+      if (e4) throw new Error(`Failed clearing lessons: ${e4.message}`);
+      const { error: e5 } = await supabase.from("listing_reports").delete().neq("listing_id", "__never__");
+      if (e5) throw new Error(`Failed clearing listing_reports: ${e5.message}`);
+      await supabase
+        .from("agent_settings")
+        .update({ value: "false", reason: "Demo reset by reviewer", updated_by: reviewerEmail, updated_at: new Date().toISOString() })
+        .eq("key", "paused");
+
+      return jsonResponse({
+        ok: true,
+        status: "reset",
+        reasons: [
+          `Demo state cleared by ${reviewerEmail} (evaluated listings, drafts, commute cache, lessons, and reports cleared; API spend log preserved).`,
+        ],
+        ms: Date.now() - startedAt,
+      });
+    }
+
     const listingId = String(body.listing_id || "").trim();
     const decision = String(body.decision || "").trim().toLowerCase();
     const reason = String(body.reason || "").trim();

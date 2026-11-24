@@ -473,6 +473,7 @@ const uiState = {
   petsRequired: false,
   hasVehicle: true,
   allowLongCommute: false,
+  skipPreviouslyRecommended: false,
   selectedAmenities: new Set(),
   neighborhood: "",
   searchText: "",
@@ -720,6 +721,9 @@ document.getElementById("clear-file-btn").addEventListener("click", () => {
   loadedFileChip.classList.add("hidden");
   showBanner("Cleared custom file — next search will use the default 50 SLO listings.", "info");
 });
+document.getElementById("skip-seen-toggle").addEventListener("change", (e) => {
+  uiState.skipPreviouslyRecommended = e.target.checked;
+});
 
 function updatePillLabels() {
   document.getElementById("label-dd-price").textContent = `≤ ${money(uiState.maxBudget)}`;
@@ -852,6 +856,7 @@ async function runEvaluation() {
       pets_required: uiState.petsRequired,
       has_vehicle: uiState.hasVehicle,
       allow_long_commute: uiState.allowLongCommute,
+      skip_previously_recommended: uiState.skipPreviouslyRecommended,
     };
     const dryRun = false;
     const fileInput = document.getElementById("csv-file-input");
@@ -1128,6 +1133,9 @@ function renderMatches(listings) {
       else if (commuteSrc === "commute:osm_osrm_routes") chips.appendChild(el("span", "card-chip green", "OSM/OSRM Maps API"));
       else if (commuteSrc === "commute:commute_cache") chips.appendChild(el("span", "card-chip", "Cached Route"));
       if (sources.some((s) => String(s).startsWith("skill:"))) chips.appendChild(el("span", "card-chip", "Skill Verified"));
+      if (sources.some((s) => String(s).startsWith("cross_session_memory:seen_earlier"))) {
+        chips.appendChild(el("span", "card-chip", "Seen in Prior Run"));
+      }
       surf.appendChild(chips);
     }
 
@@ -1279,6 +1287,39 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 });
 document.getElementById("logout-btn").addEventListener("click", async () => { await sb.auth.signOut(); showBanner("Signed out.", "info"); await checkAdminSession(); });
 document.getElementById("refresh-admin-btn").addEventListener("click", loadAdminData);
+document.getElementById("reset-demo-btn").addEventListener("click", async () => {
+  if (!window.confirm("Reset all demo data? This clears saved listings, inquiry drafts, commute cache, lessons, and student reports so you can start a fresh demo (API spend log is preserved).")) {
+    return;
+  }
+  const token = currentSession?.access_token;
+  if (!token) { showBanner("Please sign in again.", "error"); return; }
+  const btn = document.getElementById("reset-demo-btn");
+  btn.disabled = true;
+  btn.textContent = "Resetting...";
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/review-decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "reset_demo" }),
+    });
+    const data = await resp.json();
+    if (!data.ok) { showBanner(`Reset failed: ${(data.reasons || []).join(" ")}`, "error"); return; }
+    allLoadedMatches = [];
+    allFilteredOut = [];
+    lastRunSummary = { ran: false, scamsBlocked: 0, heldCount: 0, filteredCount: 0, qualifiedCount: 0 };
+    document.getElementById("saved-count-pill").textContent = "0";
+    document.getElementById("result-tabs").classList.add("hidden");
+    document.getElementById("run-stats").classList.add("hidden");
+    renderMatches([]);
+    showBanner("Demo reset complete! Saved searches, drafts, commute cache, and lessons cleared.", "ok");
+    await loadAdminData();
+  } catch (err) {
+    showBanner(`Reset error: ${err.message}`, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Reset Demo Data";
+  }
+});
 
 async function loadAdminData() { await Promise.all([loadSettings(), loadHeldListings(), loadLessons(), loadReports()]); }
 
