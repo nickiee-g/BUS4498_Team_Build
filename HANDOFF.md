@@ -11,7 +11,7 @@
 - Where to see the result:
   - **Student results:** Under **01 Live Search & SLO Map**, check the `✓ Matched`, `✕ Didn't Match`, `⏳ Held for Review`, and `🛡️ Scams Blocked` indicators (when 0 listings match, the feed automatically displays the filtered cards or explains why items were blocked/held), the status line next to the match count (`Skill active`, `in review`, `lesson(s) applied`), and the badges on each listing card (`Google Maps API` / `OSM/OSRM Maps API` / `Cached Route`, `Skill Verified`).
   - **Human checkpoints:** Click **Draft Inquiry** on any matched card for the student email checkpoint, or click **ID: Reviewer** in the top navigation bar to view the **Ambiguous & Held Listings Review Queue** and **Lessons Learned**.
-- To reset between cases: Click `×` on the `📄 <filename>` chip (or refresh the page), select the next CSV file in **More Filters -> Upload Custom Listings**, and restore default filters (`Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON). For a full clean slate (clearing saved listings, drafts, commute cache, lessons, and reports), sign into **ID: Reviewer** and click **Reset Demo Data**.
+- To reset between cases: Click `×` on the `📄 <filename>` chip, click **↺ Reset Filters** (or restore default filters: `Max: ≤ $2,400`, `Sublease Allowed` ON, `I Have a Car` ON), and select the next CSV file in **More Filters -> Upload Custom Listings**. For a full clean slate (clearing saved listings, drafts, commute cache, lessons, and reports), sign into **ID: Reviewer** and click **Reset Demo Data**.
 
 ## Test cases
 
@@ -66,3 +66,14 @@
 - Input: `test-data/E3_unclear_hoa_policy.csv`
 - Steps: With default filters (`Sublease Allowed` ON), upload `test-data/E3_unclear_hoa_policy.csv` and click **Evaluate SLO Listings**. Optionally open **ID: Reviewer** to inspect the held item.
 - Expected result: Because the listing says subleasing and pets are decided case-by-case by the HOA after lease signing, the agent does not guess `"yes"`. It holds `SLO-018` as `held_policy` (`1 in review`) and routes it to the Reviewer Control Center queue for manual sign-off.
+
+## Test results
+
+Verified in test mode (`dry_run: true`, no database writes) against the live `agent` Edge Function (`https://qjfutrpwvzqlhwcgfhai.supabase.co/functions/v1/agent`) across three live Gemini models plus one permission-switch change round (`paused = true`, then restored to `false`). Full test plan and token details are in `our_team_agent/runtime/test-plan.md` and `our_team_agent/runtime/model-benchmark.md`.
+
+| Round | When | Model | What changed | N1 | N2 | N3 | N4 | N5 | E1 | E2 | E3 | Passes | Seconds per case | Cost per case |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2026-11-23 | `gemini-3.5-flash-lite` *(default)* | Baseline (`paused = false`, default limits) | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 8/8 | 2.8s | $0.000334 |
+| 2 | 2026-11-23 | `gemini-3.8-flash` | Model comparison (`dry_run`, no fallback) | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 8/8 | 11.8s | $0.000504 |
+| 3 | 2026-11-23 | `gemini-3.1-pro-preview` | Model comparison (`dry_run`, no fallback) | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 8/8 | 12.4s | $0.004194 |
+| 4 | 2026-11-23 | `none` *(blocked before AI)* | Permission switch ON (`paused = true`, then restored) | `paused` | `paused` | `paused` | `paused` | `paused` | `paused` | `paused` | `paused` | 8/8 halted | 0.6s | $0.000000 |
